@@ -112,12 +112,16 @@ func (p *MxrouteProvider) Configure(ctx context.Context, req provider.ConfigureR
 func (p *MxrouteProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewDomainResource,
+		NewEmailAccountResource,
+		NewForwarderResource,
+		NewPointerResource,
 	}
 }
 
 func (p *MxrouteProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewDomainDataSource,
+		NewDNSDataSource,
 	}
 }
 
