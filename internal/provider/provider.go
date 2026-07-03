@@ -115,6 +115,12 @@ func (p *MxrouteProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewEmailAccountResource,
 		NewForwarderResource,
 		NewPointerResource,
+		NewCatchAllResource,
+		NewSpamSettingsResource,
+		NewSpamBlacklistEntryResource,
+		NewSpamWhitelistEntryResource,
+		NewResellerPackageResource,
+		NewResellerUserResource,
 	}
 }
 
@@ -122,6 +128,9 @@ func (p *MxrouteProvider) DataSources(ctx context.Context) []func() datasource.D
 	return []func() datasource.DataSource{
 		NewDomainDataSource,
 		NewDNSDataSource,
+		NewQuotaDataSource,
+		NewEmailQuotaDataSource,
+		NewVerificationKeyDataSource,
 	}
 }
 

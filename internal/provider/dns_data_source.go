@@ -62,36 +62,6 @@ type dnsVerificationModel struct {
 	Description types.String `tfsdk:"description"`
 }
 
-// dnsAPIModel is the MXroute API representation of a domain's DNS records.
-type dnsAPIModel struct {
-	MXRecords    []dnsMXRecordAPIModel    `json:"mx_records"`
-	SPF          *dnsRecordAPIModel       `json:"spf"`
-	DKIM         *dnsRecordAPIModel       `json:"dkim"`
-	Verification *dnsVerificationAPIModel `json:"verification"`
-}
-
-// dnsMXRecordAPIModel is a single mx_records entry from the API.
-type dnsMXRecordAPIModel struct {
-	Priority    int64  `json:"priority"`
-	Hostname    string `json:"hostname"`
-	Description string `json:"description"`
-}
-
-// dnsRecordAPIModel is a {type, name, value} DNS record from the API.
-type dnsRecordAPIModel struct {
-	Type  string `json:"type"`
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
-// dnsVerificationAPIModel is the verification record from the API.
-type dnsVerificationAPIModel struct {
-	Type        string `json:"type"`
-	Name        string `json:"name"`
-	Value       string `json:"value"`
-	Description string `json:"description"`
-}
-
 // dnsMXRecordAttrTypes is the attribute type map for one mx_records entry.
 func dnsMXRecordAttrTypes() map[string]attr.Type {
 	return map[string]attr.Type{
@@ -248,7 +218,7 @@ func (d *DNSDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 
 	domain := config.Domain.ValueString()
 
-	var api dnsAPIModel
+	var api DNSInfo
 
 	if err := d.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/dns", nil, &api); err != nil {
 		resp.Diagnostics.AddError("Error reading domain DNS", err.Error())
@@ -272,7 +242,7 @@ func (d *DNSDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		return
 	}
 
-	spf, diags := dnsRecordObject(ctx, api.SPF)
+	spf, diags := dnsRecordObject(ctx, &api.SPF)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -304,7 +274,7 @@ func (d *DNSDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 
 // dnsRecordObject builds a framework object for a {type, name, value}
 // record, returning a null object when the API returned null.
-func dnsRecordObject(ctx context.Context, api *dnsRecordAPIModel) (types.Object, diag.Diagnostics) {
+func dnsRecordObject(ctx context.Context, api *DNSRecord) (types.Object, diag.Diagnostics) {
 	if api == nil {
 		return types.ObjectNull(dnsRecordAttrTypes()), nil
 	}
@@ -318,7 +288,7 @@ func dnsRecordObject(ctx context.Context, api *dnsRecordAPIModel) (types.Object,
 
 // dnsVerificationObject builds a framework object for the verification
 // record, returning a null object when the API returned null.
-func dnsVerificationObject(ctx context.Context, api *dnsVerificationAPIModel) (types.Object, diag.Diagnostics) {
+func dnsVerificationObject(ctx context.Context, api *DNSVerification) (types.Object, diag.Diagnostics) {
 	if api == nil {
 		return types.ObjectNull(dnsVerificationAttrTypes()), nil
 	}

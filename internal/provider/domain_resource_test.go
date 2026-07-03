@@ -35,7 +35,7 @@ func testAccCheckDomainDestroy(t *testing.T, domain string) resource.TestCheckFu
 			APIKey:   os.Getenv("MXROUTE_API_KEY"),
 		})
 
-		var api domainAPIModel
+		var api Domain
 
 		err := client.Do(t.Context(), "GET", "/domains/"+domain, nil, &api)
 		if err == nil {
@@ -67,6 +67,13 @@ func TestAccDomainResource(t *testing.T) {
 				),
 			},
 			{
+				Config: testAccDomainResourceConfigMailHosting(domain, false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("mxroute_domain.test", "domain", domain),
+					resource.TestCheckResourceAttr("mxroute_domain.test", "mail_hosting", "false"),
+				),
+			},
+			{
 				ResourceName:      "mxroute_domain.test",
 				ImportState:       true,
 				ImportStateId:     domain,
@@ -82,4 +89,13 @@ resource "mxroute_domain" "test" {
   domain = %[1]q
 }
 `, domain)
+}
+
+func testAccDomainResourceConfigMailHosting(domain string, mailHosting bool) string {
+	return fmt.Sprintf(`
+resource "mxroute_domain" "test" {
+  domain       = %[1]q
+  mail_hosting = %[2]t
+}
+`, domain, mailHosting)
 }

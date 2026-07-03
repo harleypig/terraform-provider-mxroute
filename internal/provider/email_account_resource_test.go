@@ -22,7 +22,7 @@ func testAccCheckEmailAccountDestroy(t *testing.T, domain, username string) reso
 			APIKey:   os.Getenv("MXROUTE_API_KEY"),
 		})
 
-		var api emailAccountAPIModel
+		var api EmailAccount
 
 		err := client.Do(t.Context(), "GET", "/domains/"+domain+"/email-accounts/"+username, nil, &api)
 		if err == nil {

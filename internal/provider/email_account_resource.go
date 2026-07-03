@@ -50,17 +50,6 @@ type EmailAccountResourceModel struct {
 	ID                types.String  `tfsdk:"id"`
 }
 
-// emailAccountAPIModel is the MXroute API representation of a mailbox.
-type emailAccountAPIModel struct {
-	Username  string  `json:"username"`
-	Email     string  `json:"email"`
-	Quota     int64   `json:"quota"`
-	Usage     float64 `json:"usage"`
-	Limit     int64   `json:"limit"`
-	Sent      int64   `json:"sent"`
-	Suspended bool    `json:"suspended"`
-}
-
 // createEmailAccountRequest is the POST email-accounts body.
 type createEmailAccountRequest struct {
 	Username string `json:"username"`
@@ -346,8 +335,8 @@ func (r *EmailAccountResource) ImportState(ctx context.Context, req resource.Imp
 
 // fetchEmailAccount GETs a single mailbox, returning (nil, nil) when it does
 // not exist.
-func (r *EmailAccountResource) fetchEmailAccount(ctx context.Context, domain, username string) (*emailAccountAPIModel, error) {
-	var api emailAccountAPIModel
+func (r *EmailAccountResource) fetchEmailAccount(ctx context.Context, domain, username string) (*EmailAccount, error) {
+	var api EmailAccount
 
 	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/email-accounts/"+username, nil, &api); err != nil {
 		if IsNotFound(err) {
@@ -365,7 +354,7 @@ func (r *EmailAccountResource) fetchEmailAccount(ctx context.Context, domain, us
 // the config-supplied quota come from the caller so that non-computed
 // attributes stay consistent with the plan; the remaining attributes come from
 // the API. The password itself is always null in state.
-func emailAccountStateFromAPI(api *emailAccountAPIModel, domain, username string, quota, passwordWOVersion types.Int64) EmailAccountResourceModel {
+func emailAccountStateFromAPI(api *EmailAccount, domain, username string, quota, passwordWOVersion types.Int64) EmailAccountResourceModel {
 	return EmailAccountResourceModel{
 		Domain:            types.StringValue(domain),
 		Username:          types.StringValue(username),

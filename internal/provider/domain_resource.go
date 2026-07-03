@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -40,17 +41,14 @@ type DomainResourceModel struct {
 	ID          types.String `tfsdk:"id"`
 }
 
-// domainAPIModel is the MXroute API representation of a domain.
-type domainAPIModel struct {
-	Domain      string   `json:"domain"`
-	MailHosting bool     `json:"mail_hosting"`
-	SSLEnabled  bool     `json:"ssl_enabled"`
-	Pointers    []string `json:"pointers"`
-}
-
 // createDomainRequest is the POST /domains body.
 type createDomainRequest struct {
 	Domain string `json:"domain"`
+}
+
+// mailStatusRequest is the PATCH /domains/{domain}/mail-status body.
+type mailStatusRequest struct {
+	Enabled bool `json:"enabled"`
 }
 
 func (r *DomainResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -69,8 +67,12 @@ func (r *DomainResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				},
 			},
 			"mail_hosting": schema.BoolAttribute{
-				MarkdownDescription: "Whether mail hosting is enabled for the domain.",
+				MarkdownDescription: "Whether mail hosting is enabled for the domain. Defaults to the value MXroute assigns on creation; set it explicitly to toggle mail hosting on or off.",
+				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ssl_enabled": schema.BoolAttribute{
 				MarkdownDescription: "Whether SSL is enabled for the domain.",
@@ -124,6 +126,18 @@ func (r *DomainResource) Create(ctx context.Context, req resource.CreateRequest,
 		resp.Diagnostics.AddError("Error creating domain", err.Error())
 
 		return
+	}
+
+	// MXroute enables mail hosting on creation; when the plan explicitly asks
+	// for it disabled, toggle it off before reading the domain back.
+	if !plan.MailHosting.IsNull() && !plan.MailHosting.IsUnknown() && !plan.MailHosting.ValueBool() {
+		body := mailStatusRequest{Enabled: false}
+
+		if err := r.client.Do(ctx, http.MethodPatch, "/domains/"+domain+"/mail-status", body, nil); err != nil {
+			resp.Diagnostics.AddError("Error updating mail hosting", err.Error())
+
+			return
+		}
 	}
 
 	// The create response is partial; read the domain back to populate the
@@ -180,18 +194,33 @@ func (r *DomainResource) Read(ctx context.Context, req resource.ReadRequest, res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
 
-// Update refreshes the computed attributes. The domain attribute is
-// RequiresReplace and every other attribute is computed, so a plan never
-// reaches Update with a changed value — it re-reads to keep state accurate.
+// Update applies a mail-hosting toggle when it changed, then re-reads the
+// domain to keep the computed attributes accurate. The domain attribute is
+// RequiresReplace, so a plan never reaches Update with a changed domain name.
 func (r *DomainResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan DomainResourceModel
+	var plan, state DomainResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	api, err := r.fetchDomain(ctx, plan.Domain.ValueString())
+	domain := plan.Domain.ValueString()
+
+	// Toggle mail hosting when the planned value is known and differs from the
+	// current state.
+	if !plan.MailHosting.IsUnknown() && !plan.MailHosting.Equal(state.MailHosting) {
+		body := mailStatusRequest{Enabled: plan.MailHosting.ValueBool()}
+
+		if err := r.client.Do(ctx, http.MethodPatch, "/domains/"+domain+"/mail-status", body, nil); err != nil {
+			resp.Diagnostics.AddError("Error updating mail hosting", err.Error())
+
+			return
+		}
+	}
+
+	api, err := r.fetchDomain(ctx, domain)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading domain", err.Error())
 
@@ -199,18 +228,18 @@ func (r *DomainResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	if api == nil {
-		resp.Diagnostics.AddError("Error reading domain", fmt.Sprintf("domain %q was not found", plan.Domain.ValueString()))
+		resp.Diagnostics.AddError("Error reading domain", fmt.Sprintf("domain %q was not found", domain))
 
 		return
 	}
 
-	state, diags := domainModelFromAPI(ctx, api)
+	newState, diags := domainModelFromAPI(ctx, api)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &newState)...)
 }
 
 func (r *DomainResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -235,8 +264,8 @@ func (r *DomainResource) ImportState(ctx context.Context, req resource.ImportSta
 }
 
 // fetchDomain GETs a domain, returning (nil, nil) when it does not exist.
-func (r *DomainResource) fetchDomain(ctx context.Context, domain string) (*domainAPIModel, error) {
-	var api domainAPIModel
+func (r *DomainResource) fetchDomain(ctx context.Context, domain string) (*Domain, error) {
+	var api Domain
 
 	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain, nil, &api); err != nil {
 		if IsNotFound(err) {
@@ -250,7 +279,7 @@ func (r *DomainResource) fetchDomain(ctx context.Context, domain string) (*domai
 }
 
 // domainModelFromAPI maps an API domain onto the Terraform state model.
-func domainModelFromAPI(ctx context.Context, api *domainAPIModel) (DomainResourceModel, diag.Diagnostics) {
+func domainModelFromAPI(ctx context.Context, api *Domain) (DomainResourceModel, diag.Diagnostics) {
 	pointers, diags := types.ListValueFrom(ctx, types.StringType, api.Pointers)
 
 	return DomainResourceModel{
