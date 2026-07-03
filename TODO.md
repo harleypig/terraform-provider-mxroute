@@ -10,10 +10,15 @@
 - [ ] Promote the Go security/complexity tooling added here (`gosec`,
   `gocyclo`, the `govulncheck` CI job) into the global `go.md` /
   `golangci-lint.md` so every Go repo inherits it.
-- [ ] Regenerate docs with tfplugindocs (blocked on the `generate` fix below);
-  add `examples/` per resource.
+- [x] Regenerate the Registry docs with tfplugindocs for all resources/data
+  sources (`make generate`); `docs/` is excluded from the markdown fixers so
+  it stays byte-identical to generation.
 
 ## Repo Setup
 
 - [ ] Release signing + Registry (see [RELEASING.md](RELEASING.md)): GPG key, `GPG_PRIVATE_KEY`/`PASSPHRASE` secrets, Registry registration; tag `v0.1.0` when the first resource lands.
-- [ ] Docs generation: the `generate` CI check needs a real `terraform` (the docker wrapper can't reach `../examples`); wire one, then make `generate` required. Advisory for now.
+- [ ] Make the `generate` check **required**: it now passes (CI already has a
+  real terraform via `setup-terraform`; the failures were only stale docs, now
+  regenerated). Add it to the branch-ruleset required checks. Local regeneration
+  needs a real terraform on PATH — the docker-wrapper `bin/terraform` can't
+  reach `../examples` across the mount boundary.

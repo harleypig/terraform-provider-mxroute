@@ -34,3 +34,6 @@ repos:
     rev: v0.48.0
     hooks:
       - id: markdownlint-docker
+        # docs/ is tfplugindocs-generated (see `make generate`); its output
+        # format is not ours to lint.
+        exclude: ^docs/

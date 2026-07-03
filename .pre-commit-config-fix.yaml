@@ -7,7 +7,11 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
+        # docs/ is tfplugindocs-generated verbatim; editing it here would make
+        # the committed docs differ from `make generate` and fail the CI diff.
+        exclude: ^docs/
       - id: end-of-file-fixer
+        exclude: ^docs/
 
   - repo: https://github.com/golangci/golangci-lint
     rev: v2.12.2
@@ -19,3 +23,6 @@ repos:
     rev: v0.48.0
     hooks:
       - id: markdownlint-fix-docker
+        # docs/ is tfplugindocs-generated (see `make generate`); its output
+        # format is not ours to lint.
+        exclude: ^docs/
