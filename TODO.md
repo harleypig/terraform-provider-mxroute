@@ -2,10 +2,6 @@
 
 ## Provider Setup
 
-- [x] API client (`internal/provider/client.go`): 3-header auth,
-  `{success,data}` envelope unwrap, error mapping. Thin transport
-  (`Client.Do`) so adding a resource never edits `client.go`; unit-tested
-  with `httptest`.
 - [ ] Wire the provider: `Configure` builds the `Client` and passes it as
   `ResourceData`/`DataSourceData`; provider schema takes
   `server`/`username`/`api_key` with `MXROUTE_*` env fallback. Lands with the
