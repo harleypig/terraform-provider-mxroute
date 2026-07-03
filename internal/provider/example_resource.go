@@ -1,6 +1,3 @@
-// Copyright IBM Corp. 2021, 2025
-// SPDX-License-Identifier: MPL-2.0
-
 package provider
 
 import (
@@ -19,8 +16,10 @@ import (
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ resource.Resource = &ExampleResource{}
-var _ resource.ResourceWithImportState = &ExampleResource{}
+var (
+	_ resource.Resource                = &ExampleResource{}
+	_ resource.ResourceWithImportState = &ExampleResource{}
+)
 
 func NewExampleResource() resource.Resource {
 	return &ExampleResource{}

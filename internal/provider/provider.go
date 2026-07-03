@@ -1,6 +1,3 @@
-// Copyright IBM Corp. 2021, 2025
-// SPDX-License-Identifier: MPL-2.0
-
 package provider
 
 import (
@@ -18,10 +15,12 @@ import (
 )
 
 // Ensure MxrouteProvider satisfies various provider interfaces.
-var _ provider.Provider = &MxrouteProvider{}
-var _ provider.ProviderWithFunctions = &MxrouteProvider{}
-var _ provider.ProviderWithEphemeralResources = &MxrouteProvider{}
-var _ provider.ProviderWithActions = &MxrouteProvider{}
+var (
+	_ provider.Provider                       = &MxrouteProvider{}
+	_ provider.ProviderWithFunctions          = &MxrouteProvider{}
+	_ provider.ProviderWithEphemeralResources = &MxrouteProvider{}
+	_ provider.ProviderWithActions            = &MxrouteProvider{}
+)
 
 // MxrouteProvider defines the provider implementation.
 type MxrouteProvider struct {

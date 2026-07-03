@@ -1,6 +1,3 @@
-// Copyright IBM Corp. 2021, 2025
-// SPDX-License-Identifier: MPL-2.0
-
 package provider
 
 import (
@@ -69,7 +66,7 @@ func TestExampleFunction_Unknown(t *testing.T) {
 				resource "terraform_data" "test" {
 					input = "testvalue"
 				}
-				
+
 				output "test" {
 					value = provider::mxroute::example(terraform_data.test.output)
 				}

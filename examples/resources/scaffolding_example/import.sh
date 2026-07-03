@@ -1,1 +1,0 @@
-terraform import mxroute_example.test "id-123"
