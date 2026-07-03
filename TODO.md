@@ -2,10 +2,6 @@
 
 ## Provider Setup
 
-- [x] Fan out: refactored the 5 existing resources onto `models.go` and created
-  catch-all, spam (settings/blacklist/whitelist), quota + email-quota +
-  verification-key data sources, reseller users/packages, and a writable
-  `mail_hosting` on `mxroute_domain` (`PATCH mail-status`).
 - [ ] Verify against the live account (via acceptance tests) the caveats the
   fan-out flagged in code comments: `/quota` + `/quota/email` enveloping
   (may be unwrapped), and the spam **blacklist** GET response shape (assumed
