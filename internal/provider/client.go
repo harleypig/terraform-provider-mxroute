@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -19,6 +20,27 @@ const (
 
 	// defaultTimeout bounds a single API request.
 	defaultTimeout = 30 * time.Second
+)
+
+// MXroute API error codes — the "code" field of a failed envelope.
+const (
+	errCodeNotFound    = "NOT_FOUND"
+	errCodeConflict    = "CONFLICT"
+	errCodeRateLimited = "RATE_LIMITED"
+	errCodeServer      = "SERVER_ERROR"
+)
+
+// Rate-limit retry policy applied to RATE_LIMITED responses.
+const (
+	// maxRateLimitRetries bounds how many times a rate-limited request is
+	// retried before the RATE_LIMITED error is returned.
+	maxRateLimitRetries = 3
+
+	// defaultRetryDelay is used when a 429 carries no usable rate-limit hint.
+	defaultRetryDelay = 1 * time.Second
+
+	// maxRetryWait caps how long a single retry will wait.
+	maxRetryWait = 60 * time.Second
 )
 
 // Client is a thin REST client for the MXroute API. It sets the three
@@ -82,6 +104,10 @@ type APIError struct {
 	Message string
 	// Field names the offending input on a validation error; empty otherwise.
 	Field string
+	// RetryAfter is the delay before retrying a RATE_LIMITED request, taken
+	// from the Retry-After / X-RateLimit-Reset headers (or a default backoff
+	// when the response gives no hint). Zero for non-rate-limit errors.
+	RetryAfter time.Duration
 }
 
 // Error implements the error interface.
@@ -96,9 +122,27 @@ func (e *APIError) Error() string {
 // IsNotFound reports whether err is an *APIError with a NOT_FOUND code —
 // the signal a resource's Read uses to drop the resource from state.
 func IsNotFound(err error) bool {
+	return apiErrorHasCode(err, errCodeNotFound)
+}
+
+// IsConflict reports whether err is an *APIError with a CONFLICT code — the
+// resource already exists (e.g. a create against an existing name).
+func IsConflict(err error) bool {
+	return apiErrorHasCode(err, errCodeConflict)
+}
+
+// IsRateLimited reports whether err is an *APIError with a RATE_LIMITED code.
+// The client already retries these; a surfaced RATE_LIMITED means the retries
+// were exhausted.
+func IsRateLimited(err error) bool {
+	return apiErrorHasCode(err, errCodeRateLimited)
+}
+
+// apiErrorHasCode reports whether err is an *APIError carrying code.
+func apiErrorHasCode(err error, code string) bool {
 	var apiErr *APIError
 
-	return errors.As(err, &apiErr) && apiErr.Code == "NOT_FOUND"
+	return errors.As(err, &apiErr) && apiErr.Code == code
 }
 
 // envelope is the {success, data, error} wrapper every response carries.
@@ -121,8 +165,13 @@ type envelopeError struct {
 // envelope's data field is unmarshaled into it. A success:false envelope,
 // or a non-2xx status with no envelope, is returned as an *APIError;
 // transport and decoding problems are returned as wrapped errors.
+//
+// A RATE_LIMITED (429) response is retried up to maxRateLimitRetries times,
+// waiting the interval the response advertises (Retry-After /
+// X-RateLimit-Reset) before each retry. A 429 rejects the request before it
+// takes effect, so retrying is safe for every method.
 func (c *Client) Do(ctx context.Context, method, path string, body, out any) error {
-	var reqBody io.Reader
+	var bodyBytes []byte
 
 	if body != nil {
 		encoded, err := json.Marshal(body)
@@ -130,7 +179,37 @@ func (c *Client) Do(ctx context.Context, method, path string, body, out any) err
 			return fmt.Errorf("encoding request body: %w", err)
 		}
 
-		reqBody = bytes.NewReader(encoded)
+		bodyBytes = encoded
+	}
+
+	for attempt := 0; ; attempt++ {
+		err := c.doOnce(ctx, method, path, bodyBytes, out)
+
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) || apiErr.Code != errCodeRateLimited || attempt >= maxRateLimitRetries {
+			return err
+		}
+
+		wait := apiErr.RetryAfter
+		if wait > maxRetryWait {
+			wait = maxRetryWait
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+
+		case <-time.After(wait):
+		}
+	}
+}
+
+// doOnce performs a single request/response cycle for Do.
+func (c *Client) doOnce(ctx context.Context, method, path string, bodyBytes []byte, out any) error {
+	var reqBody io.Reader
+
+	if bodyBytes != nil {
+		reqBody = bytes.NewReader(bodyBytes)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, reqBody)
@@ -143,7 +222,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body, out any) err
 	req.Header.Set("X-API-Key", c.apiKey)
 	req.Header.Set("Accept", "application/json")
 
-	if body != nil {
+	if bodyBytes != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
@@ -167,7 +246,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body, out any) err
 
 		return &APIError{
 			StatusCode: resp.StatusCode,
-			Code:       "SERVER_ERROR",
+			Code:       errCodeServer,
 			Message:    http.StatusText(resp.StatusCode),
 		}
 	}
@@ -181,7 +260,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body, out any) err
 	if !env.Success {
 		apiErr := &APIError{
 			StatusCode: resp.StatusCode,
-			Code:       "SERVER_ERROR",
+			Code:       errCodeServer,
 			Message:    http.StatusText(resp.StatusCode),
 		}
 
@@ -189,6 +268,10 @@ func (c *Client) Do(ctx context.Context, method, path string, body, out any) err
 			apiErr.Code = env.Error.Code
 			apiErr.Message = env.Error.Message
 			apiErr.Field = env.Error.Field
+		}
+
+		if apiErr.Code == errCodeRateLimited {
+			apiErr.RetryAfter = retryAfterFromHeaders(resp.Header)
 		}
 
 		return apiErr
@@ -201,4 +284,28 @@ func (c *Client) Do(ctx context.Context, method, path string, body, out any) err
 	}
 
 	return nil
+}
+
+// retryAfterFromHeaders derives the wait before retrying a rate-limited
+// request from the response headers, preferring Retry-After (seconds) then
+// X-RateLimit-Reset (a Unix timestamp). It returns defaultRetryDelay when the
+// response carries no usable hint.
+func retryAfterFromHeaders(h http.Header) time.Duration {
+	if ra := h.Get("Retry-After"); ra != "" {
+		if secs, err := strconv.Atoi(ra); err == nil && secs >= 0 {
+			return time.Duration(secs) * time.Second
+		}
+	}
+
+	if reset := h.Get("X-RateLimit-Reset"); reset != "" {
+		if ts, err := strconv.ParseInt(reset, 10, 64); err == nil {
+			if d := time.Until(time.Unix(ts, 0)); d > 0 {
+				return d
+			}
+
+			return 0
+		}
+	}
+
+	return defaultRetryDelay
 }
