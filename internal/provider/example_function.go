@@ -1,6 +1,3 @@
-// Copyright IBM Corp. 2021, 2025
-// SPDX-License-Identifier: MPL-2.0
-
 package provider
 
 import (
@@ -9,9 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/function"
 )
 
-var (
-	_ function.Function = ExampleFunction{}
-)
+var _ function.Function = ExampleFunction{}
 
 func NewExampleFunction() function.Function {
 	return ExampleFunction{}

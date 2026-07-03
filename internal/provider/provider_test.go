@@ -1,6 +1,3 @@
-// Copyright IBM Corp. 2021, 2025
-// SPDX-License-Identifier: MPL-2.0
-
 package provider
 
 import (
@@ -24,7 +21,7 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 // This lets the data be referenced in test assertions with state checks.
 var testAccProtoV6ProviderFactoriesWithEcho = map[string]func() (tfprotov6.ProviderServer, error){
 	"mxroute": providerserver.NewProtocol6WithError(New("test")()),
-	"echo":        echoprovider.NewProviderServer(),
+	"echo":    echoprovider.NewProviderServer(),
 }
 
 func testAccPreCheck(t *testing.T) {

@@ -52,7 +52,8 @@ issues:
   max-same-issues: 0
 formatters:
   enable:
-    - gofmt
+    - gofumpt
+    - goimports
   exclusions:
     generated: lax
     paths:
