@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: MXroute API documentation
+    url: https://api.mxroute.com/docs
+    about: Reference for the underlying API this provider wraps. Provider bugs and feature requests belong in the templates above.

@@ -1,0 +1,77 @@
+name: Bug report
+description: Report a bug in the MXroute Terraform provider.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please fill out the fields below so the issue
+        can be reproduced. Redact any secrets (API keys, passwords) from configs
+        and logs before posting.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight checklist
+      options:
+        - label: I searched existing issues and this has not already been reported.
+          required: true
+  - type: input
+    id: provider_version
+    attributes:
+      label: Provider version
+      description: The `mxroute` provider version (from `.terraform.lock.hcl`).
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: terraform_version
+    attributes:
+      label: Terraform version
+      description: Output of `terraform version`.
+      placeholder: "1.14.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: components
+    attributes:
+      label: Affected resource(s) / data source(s)
+      description: Which provider components are involved? Select all that apply.
+      multiple: true
+      options:
+        - mxroute_domain
+        - mxroute_email_account
+        - mxroute_forwarder
+        - mxroute_pointer
+        - mxroute_catch_all
+        - mxroute_spam_settings
+        - mxroute_spam_blacklist_entry
+        - mxroute_spam_whitelist_entry
+        - mxroute_reseller_user
+        - mxroute_reseller_package
+        - data.mxroute_domain
+        - data.mxroute_dns
+        - data.mxroute_quota
+        - data.mxroute_email_quota
+        - data.mxroute_verification_key
+        - provider configuration
+        - other / unsure
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Terraform configuration
+      description: A minimal configuration that reproduces the issue.
+      render: hcl
+  - type: textarea
+    id: logs
+    attributes:
+      label: Terraform output / logs
+      description: Relevant output, ideally with `TF_LOG=DEBUG`. Redact secrets.
+      render: shell

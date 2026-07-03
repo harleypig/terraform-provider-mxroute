@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest a new resource, data source, or capability.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. This provider can only expose what
+        the MXroute API supports (https://api.mxroute.com/docs) — if your request
+        depends on a specific endpoint, please link it below.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight checklist
+      options:
+        - label: I searched existing issues and this has not already been requested.
+          required: true
+  - type: textarea
+    id: usecase
+    attributes:
+      label: Use case
+      description: What are you trying to accomplish, and why is it not possible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed configuration
+      description: If you have one, sketch the Terraform configuration you would like to write.
+      render: hcl
+  - type: input
+    id: api_reference
+    attributes:
+      label: MXroute API reference
+      description: Link to the API endpoint(s) this depends on, if any.
+      placeholder: "https://api.mxroute.com/docs#..."
