@@ -20,7 +20,7 @@ func testAccCheckPointerDestroy(t *testing.T, domain, pointer string) resource.T
 			APIKey:   os.Getenv("MXROUTE_API_KEY"),
 		})
 
-		var list []pointerAPIModel
+		var list []DomainPointer
 
 		err := client.Do(t.Context(), "GET", "/domains/"+domain+"/pointers", nil, &list)
 		if err != nil {

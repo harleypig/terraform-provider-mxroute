@@ -42,13 +42,6 @@ type ForwarderResourceModel struct {
 	ID           types.String `tfsdk:"id"`
 }
 
-// forwarderAPIModel is the MXroute API representation of a forwarder.
-type forwarderAPIModel struct {
-	Alias        string   `json:"alias"`
-	Email        string   `json:"email"`
-	Destinations []string `json:"destinations"`
-}
-
 // createForwarderRequest is the POST /domains/{domain}/forwarders body.
 type createForwarderRequest struct {
 	Alias        string   `json:"alias"`
@@ -276,8 +269,8 @@ func (r *ForwarderResource) ImportState(ctx context.Context, req resource.Import
 
 // fetchForwarder lists a domain's forwarders and returns the one matching
 // alias, or (nil, nil) when no such forwarder exists.
-func (r *ForwarderResource) fetchForwarder(ctx context.Context, domain, alias string) (*forwarderAPIModel, error) {
-	var forwarders []forwarderAPIModel
+func (r *ForwarderResource) fetchForwarder(ctx context.Context, domain, alias string) (*Forwarder, error) {
+	var forwarders []Forwarder
 
 	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/forwarders", nil, &forwarders); err != nil {
 		if IsNotFound(err) {
@@ -297,7 +290,7 @@ func (r *ForwarderResource) fetchForwarder(ctx context.Context, domain, alias st
 }
 
 // forwarderModelFromAPI maps an API forwarder onto the Terraform state model.
-func forwarderModelFromAPI(ctx context.Context, domain string, api *forwarderAPIModel) (ForwarderResourceModel, diag.Diagnostics) {
+func forwarderModelFromAPI(ctx context.Context, domain string, api *Forwarder) (ForwarderResourceModel, diag.Diagnostics) {
 	destinations, diags := types.ListValueFrom(ctx, types.StringType, api.Destinations)
 
 	return ForwarderResourceModel{

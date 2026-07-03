@@ -2,10 +2,15 @@
 
 ## Provider Setup
 
-- [ ] Fan out: refactor the 5 existing resources onto `models.go` and create
-  the new modules — catch-all, spam (settings/blacklist/whitelist), quota +
-  email-quota + verification-key data sources, reseller users/packages, and a
-  writable `mail_hosting` on `mxroute_domain` (`PATCH mail-status`).
+- [x] Fan out: refactored the 5 existing resources onto `models.go` and created
+  catch-all, spam (settings/blacklist/whitelist), quota + email-quota +
+  verification-key data sources, reseller users/packages, and a writable
+  `mail_hosting` on `mxroute_domain` (`PATCH mail-status`).
+- [ ] Verify against the live account (via acceptance tests) the caveats the
+  fan-out flagged in code comments: `/quota` + `/quota/email` enveloping
+  (may be unwrapped), and the spam **blacklist** GET response shape (assumed
+  `[]string` like the whitelist). Reseller user/package are unverifiable
+  without a reseller account.
 - [ ] GitHub issue templates (`.github/ISSUE_TEMPLATE/`): bug report + feature
   request forms + `config.yml`.
 - [ ] Regenerate docs with tfplugindocs (blocked on the `generate` fix below);

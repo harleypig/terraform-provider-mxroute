@@ -18,7 +18,7 @@ func testAccCheckForwarderDestroy(t *testing.T, domain, alias string) resource.T
 			APIKey:   os.Getenv("MXROUTE_API_KEY"),
 		})
 
-		var forwarders []forwarderAPIModel
+		var forwarders []Forwarder
 
 		err := client.Do(t.Context(), "GET", "/domains/"+domain+"/forwarders", nil, &forwarders)
 		if err != nil {

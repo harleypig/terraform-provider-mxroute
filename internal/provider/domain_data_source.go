@@ -94,7 +94,7 @@ func (d *DomainDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	var api domainAPIModel
+	var api Domain
 
 	if err := d.client.Do(ctx, http.MethodGet, "/domains/"+config.Domain.ValueString(), nil, &api); err != nil {
 		resp.Diagnostics.AddError("Error reading domain", err.Error())

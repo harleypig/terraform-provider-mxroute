@@ -43,14 +43,6 @@ type PointerResourceModel struct {
 	ID      types.String `tfsdk:"id"`
 }
 
-// pointerAPIModel is the MXroute API representation of a domain pointer, as
-// returned by the list endpoint.
-type pointerAPIModel struct {
-	Pointer string `json:"pointer"`
-	Type    string `json:"type"`
-	Target  string `json:"target"`
-}
-
 // createPointerRequest is the POST /domains/{domain}/pointers body.
 type createPointerRequest struct {
 	Pointer string `json:"pointer"`
@@ -265,8 +257,8 @@ func (r *PointerResource) ImportState(ctx context.Context, req resource.ImportSt
 
 // fetchPointer lists the domain's pointers and returns the one named pointer,
 // or (nil, nil) when the domain or the pointer does not exist.
-func (r *PointerResource) fetchPointer(ctx context.Context, domain, pointer string) (*pointerAPIModel, error) {
-	var list []pointerAPIModel
+func (r *PointerResource) fetchPointer(ctx context.Context, domain, pointer string) (*DomainPointer, error) {
+	var list []DomainPointer
 
 	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/pointers", nil, &list); err != nil {
 		if IsNotFound(err) {
@@ -288,7 +280,7 @@ func (r *PointerResource) fetchPointer(ctx context.Context, domain, pointer stri
 // pointerModelFromAPI maps an API pointer onto the Terraform state model. The
 // alias flag is derived from the reported type: "alias" is an alias, anything
 // else (e.g. "redirect") is not.
-func pointerModelFromAPI(domain string, api *pointerAPIModel) PointerResourceModel {
+func pointerModelFromAPI(domain string, api *DomainPointer) PointerResourceModel {
 	return PointerResourceModel{
 		Domain:  types.StringValue(domain),
 		Pointer: types.StringValue(api.Pointer),
