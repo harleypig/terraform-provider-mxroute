@@ -11,8 +11,9 @@
   (and any fan-out workflow) follow.
 - [ ] `mxroute_email_account` resource — write-only password (`WriteOnly` + `*_wo_version` trigger).
 - [ ] `mxroute_forwarder`, `mxroute_pointer` resources; `mxroute_dns` data source.
-- [ ] Replace the remaining template examples (function / action / ephemeral
-  resource) once real equivalents exist, or drop them.
+- [x] Remove the remaining template scaffolding (function / action / ephemeral
+  resource + tests + docs) — dropped, as the provider now requires credentials
+  and MXroute has no such surface planned.
 - [ ] Acceptance tests against the live account (`TF_ACC`), gated out of
   default CI — `mxroute_domain` covered; add per new resource.
 - [ ] Regenerate docs with tfplugindocs (blocked on the `generate` fix below);

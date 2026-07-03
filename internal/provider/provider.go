@@ -4,10 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
-	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -15,13 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// Ensure MxrouteProvider satisfies various provider interfaces.
-var (
-	_ provider.Provider                       = &MxrouteProvider{}
-	_ provider.ProviderWithFunctions          = &MxrouteProvider{}
-	_ provider.ProviderWithEphemeralResources = &MxrouteProvider{}
-	_ provider.ProviderWithActions            = &MxrouteProvider{}
-)
+// Ensure MxrouteProvider satisfies the provider interface.
+var _ provider.Provider = &MxrouteProvider{}
 
 // MxrouteProvider defines the provider implementation.
 type MxrouteProvider struct {
@@ -123,27 +115,9 @@ func (p *MxrouteProvider) Resources(ctx context.Context) []func() resource.Resou
 	}
 }
 
-func (p *MxrouteProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
-	return []func() ephemeral.EphemeralResource{
-		NewExampleEphemeralResource,
-	}
-}
-
 func (p *MxrouteProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewDomainDataSource,
-	}
-}
-
-func (p *MxrouteProvider) Functions(ctx context.Context) []func() function.Function {
-	return []func() function.Function{
-		NewExampleFunction,
-	}
-}
-
-func (p *MxrouteProvider) Actions(ctx context.Context) []func() action.Action {
-	return []func() action.Action{
-		NewExampleAction,
 	}
 }
 
