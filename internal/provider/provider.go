@@ -2,25 +2,18 @@ package provider
 
 import (
 	"context"
-	"net/http"
+	"os"
 
-	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
-	"github.com/hashicorp/terraform-plugin-framework/function"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// Ensure MxrouteProvider satisfies various provider interfaces.
-var (
-	_ provider.Provider                       = &MxrouteProvider{}
-	_ provider.ProviderWithFunctions          = &MxrouteProvider{}
-	_ provider.ProviderWithEphemeralResources = &MxrouteProvider{}
-	_ provider.ProviderWithActions            = &MxrouteProvider{}
-)
+// Ensure MxrouteProvider satisfies the provider interface.
+var _ provider.Provider = &MxrouteProvider{}
 
 // MxrouteProvider defines the provider implementation.
 type MxrouteProvider struct {
@@ -32,7 +25,9 @@ type MxrouteProvider struct {
 
 // MxrouteProviderModel describes the provider data model.
 type MxrouteProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
+	Server   types.String `tfsdk:"server"`
+	Username types.String `tfsdk:"username"`
+	APIKey   types.String `tfsdk:"api_key"`
 }
 
 func (p *MxrouteProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -43,9 +38,18 @@ func (p *MxrouteProvider) Metadata(ctx context.Context, req provider.MetadataReq
 func (p *MxrouteProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Example provider attribute",
+			"server": schema.StringAttribute{
+				MarkdownDescription: "MXroute mail server hostname, sent as `X-Server`. Falls back to the `MXROUTE_SERVER` environment variable.",
 				Optional:            true,
+			},
+			"username": schema.StringAttribute{
+				MarkdownDescription: "DirectAdmin username, sent as `X-Username`. Falls back to the `MXROUTE_USERNAME` environment variable.",
+				Optional:            true,
+			},
+			"api_key": schema.StringAttribute{
+				MarkdownDescription: "API key, sent as `X-API-Key`. Falls back to the `MXROUTE_API_KEY` environment variable.",
+				Optional:            true,
+				Sensitive:           true,
 			},
 		},
 	}
@@ -60,42 +64,60 @@ func (p *MxrouteProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
+	// A configured attribute wins over the environment fallback.
+	server := os.Getenv("MXROUTE_SERVER")
+	if !data.Server.IsNull() {
+		server = data.Server.ValueString()
+	}
 
-	// Example client configuration for data sources and resources
-	client := http.DefaultClient
+	username := os.Getenv("MXROUTE_USERNAME")
+	if !data.Username.IsNull() {
+		username = data.Username.ValueString()
+	}
+
+	apiKey := os.Getenv("MXROUTE_API_KEY")
+	if !data.APIKey.IsNull() {
+		apiKey = data.APIKey.ValueString()
+	}
+
+	if server == "" {
+		resp.Diagnostics.AddAttributeError(path.Root("server"), "Missing MXroute server",
+			"Set the `server` attribute or the MXROUTE_SERVER environment variable.")
+	}
+
+	if username == "" {
+		resp.Diagnostics.AddAttributeError(path.Root("username"), "Missing MXroute username",
+			"Set the `username` attribute or the MXROUTE_USERNAME environment variable.")
+	}
+
+	if apiKey == "" {
+		resp.Diagnostics.AddAttributeError(path.Root("api_key"), "Missing MXroute API key",
+			"Set the `api_key` attribute or the MXROUTE_API_KEY environment variable.")
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	client := NewClient(ClientConfig{
+		Server:   server,
+		Username: username,
+		APIKey:   apiKey,
+	})
+
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }
 
 func (p *MxrouteProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewExampleResource,
-	}
-}
-
-func (p *MxrouteProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
-	return []func() ephemeral.EphemeralResource{
-		NewExampleEphemeralResource,
+		NewDomainResource,
 	}
 }
 
 func (p *MxrouteProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewExampleDataSource,
-	}
-}
-
-func (p *MxrouteProvider) Functions(ctx context.Context) []func() function.Function {
-	return []func() function.Function{
-		NewExampleFunction,
-	}
-}
-
-func (p *MxrouteProvider) Actions(ctx context.Context) []func() action.Action {
-	return []func() action.Action{
-		NewExampleAction,
+		NewDomainDataSource,
 	}
 }
 

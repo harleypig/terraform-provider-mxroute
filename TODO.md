@@ -2,17 +2,12 @@
 
 ## Provider Setup
 
-- [ ] Wire the provider: `Configure` builds the `Client` and passes it as
-  `ResourceData`/`DataSourceData`; provider schema takes
-  `server`/`username`/`api_key` with `MXROUTE_*` env fallback. Lands with the
-  first resource (replaces the template's `endpoint`/`http.DefaultClient`
-  scaffolding).
-- [ ] `mxroute_domain` data source + resource (`/domains`, `/domains/{d}`).
 - [ ] `mxroute_email_account` resource — write-only password (`WriteOnly` + `*_wo_version` trigger).
 - [ ] `mxroute_forwarder`, `mxroute_pointer` resources; `mxroute_dns` data source.
-- [ ] Replace the template's example resource/data source/function/action.
-- [ ] Acceptance tests against the live account (`TF_ACC`), gated out of default CI.
-- [ ] Regenerate docs with tfplugindocs; add `examples/` per resource.
+- [ ] Acceptance tests against the live account (`TF_ACC`), gated out of
+  default CI — `mxroute_domain` covered; add per new resource.
+- [ ] Regenerate docs with tfplugindocs (blocked on the `generate` fix below);
+  add `examples/` per resource.
 
 ## Repo Setup
 
