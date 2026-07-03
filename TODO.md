@@ -9,6 +9,9 @@
   without a reseller account.
 - [ ] GitHub issue templates (`.github/ISSUE_TEMPLATE/`): bug report + feature
   request forms + `config.yml`.
+- [ ] Promote the Go security/complexity tooling added here (`gosec`,
+  `gocyclo`, the `govulncheck` CI job) into the global `go.md` /
+  `golangci-lint.md` so every Go repo inherits it.
 - [ ] Regenerate docs with tfplugindocs (blocked on the `generate` fix below);
   add `examples/` per resource.
 

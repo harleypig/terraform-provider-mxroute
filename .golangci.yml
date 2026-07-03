@@ -8,6 +8,8 @@ linters:
     - errcheck
     - forcetypeassert
     - godot
+    - gocyclo
+    - gosec
     - ineffassign
     - makezero
     - misspell
@@ -30,6 +32,11 @@ linters:
       - builtin$
       - examples$
   settings:
+    gocyclo:
+      # A guardrail against complexity creep, set just above the current
+      # ceiling (reseller_user Update at 18); provider CRUD is naturally
+      # branchy, so this flags only genuinely tangled functions.
+      min-complexity: 20
     depguard:
       rules:
         main:

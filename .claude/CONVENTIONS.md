@@ -43,8 +43,10 @@ Follow the `terraform-provider-patterns` skill:
 ## Toolchain & reproducibility
 
 Per `go.md`: the Go version and dev tools are pinned in `go.mod`
-(`toolchain go1.25.8`, `tool` directives), so a local Go ≥ 1.21 builds it via
+(`go 1.25.11`, `tool` directives), so a local Go ≥ 1.21 builds it via
 `GOTOOLCHAIN=auto`. CI uses `actions/setup-go` with `go-version-file: go.mod`.
+Keep the pinned patch current — `govulncheck` (below) flags stdlib CVEs, and
+the fix is usually a patch bump here.
 
 ## QA
 
@@ -52,8 +54,13 @@ Per `go.md`: the Go version and dev tools are pinned in `go.mod`
   and `golangci-lint run`, config in `.golangci.yml`; pre-commit gates it
   (`.pre-commit-config.yaml` + `.pre-commit-config-fix.yaml`), and CI is the
   authoritative lint gate.
-- **Tests:** `go test` (unit) + `terraform-plugin-testing` acceptance — see
-  [TESTS.md](TESTS.md).
+- **Code smell / complexity:** `staticcheck` + `gocyclo` (min-complexity 20)
+  run inside golangci-lint.
+- **Security:** `gosec` (SAST) inside golangci-lint; `govulncheck` (SCA / stdlib
+  vuln scan, call-graph aware) as its own CI job; `gitleaks` +
+  `detect-private-key` (secrets) in pre-commit.
+- **Tests:** `go test -cover` (unit) + `terraform-plugin-testing` acceptance —
+  see [TESTS.md](TESTS.md).
 - **Docs:** `tfplugindocs` via `go generate`, kept current.
 
 ## Merge policy & versioning
