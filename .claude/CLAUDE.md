@@ -11,7 +11,7 @@ in via the imports at the bottom.
   Registry contract matter; `master` is PR-only.
 - **The language is Go.** The global `go.md` / `golangci-lint.md` apply;
   provider-dev depth is the `terraform-provider-patterns` skill.
-- **The toolchain is pinned in `go.mod`** (`go1.25.8`). A local Go **≥ 1.21**
+- **The toolchain is pinned in `go.mod`** (`go1.25.11`). A local Go **≥ 1.21**
   is enough — `GOTOOLCHAIN=auto` fetches the pinned toolchain; do **not**
   require a system-Go bump.
 - **Acceptance tests hit a LIVE MXroute account** (`TF_ACC`), via the harleydev
