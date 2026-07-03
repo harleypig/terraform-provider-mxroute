@@ -15,8 +15,10 @@ import (
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ action.Action = &ExampleAction{}
-var _ action.ActionWithConfigure = &ExampleAction{}
+var (
+	_ action.Action              = &ExampleAction{}
+	_ action.ActionWithConfigure = &ExampleAction{}
+)
 
 func NewExampleAction() action.Action {
 	return &ExampleAction{}

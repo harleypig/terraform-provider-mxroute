@@ -1,0 +1,15 @@
+extends: default
+
+rules:
+  line-length:
+    max: 160
+    level: warning
+  document-start: disable
+  comments-indentation: disable
+  comments:
+    min-spaces-from-content: 1   # tool configs (goreleaser, golangci) use 1
+  truthy:
+    check-keys: false            # allow GitHub Actions `on:` keys
+  indentation:
+    spaces: 2
+    indent-sequences: whatever   # goreleaser mixes 0- and 2-indent sequences
