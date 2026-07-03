@@ -3,6 +3,7 @@ package provider
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -181,5 +182,124 @@ func TestNewClientDefaults(t *testing.T) {
 	trimmed := NewClient(ClientConfig{BaseURL: "https://example.test/"})
 	if trimmed.baseURL != "https://example.test" {
 		t.Errorf("baseURL = %q, want trailing slash trimmed", trimmed.baseURL)
+	}
+}
+
+func TestDoMapsAllErrorCodes(t *testing.T) {
+	cases := []struct {
+		code   string
+		status int
+	}{
+		{"VALIDATION_ERROR", http.StatusBadRequest},
+		{"UNAUTHORIZED", http.StatusUnauthorized},
+		{"FORBIDDEN", http.StatusForbidden},
+		{"NOT_FOUND", http.StatusNotFound},
+		{"CONFLICT", http.StatusConflict},
+		{"BUSINESS_ERROR", http.StatusUnprocessableEntity},
+		{"RATE_LIMITED", http.StatusTooManyRequests},
+		{"SERVER_ERROR", http.StatusInternalServerError},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.code, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				// Retry-After 0 keeps the RATE_LIMITED retries instant.
+				w.Header().Set("Retry-After", "0")
+				w.WriteHeader(tc.status)
+				_, _ = fmt.Fprintf(w, `{"success":false,"error":{"code":%q,"message":"boom"}}`, tc.code)
+			}))
+			defer srv.Close()
+
+			client := newTestClient(srv)
+
+			err := client.Do(t.Context(), http.MethodGet, "/x", nil, nil)
+
+			var apiErr *APIError
+			if !errors.As(err, &apiErr) {
+				t.Fatalf("error = %v (%T), want *APIError", err, err)
+			}
+
+			if apiErr.Code != tc.code || apiErr.StatusCode != tc.status {
+				t.Errorf("got code=%q status=%d, want code=%q status=%d", apiErr.Code, apiErr.StatusCode, tc.code, tc.status)
+			}
+		})
+	}
+}
+
+func TestDoRetriesOnRateLimit(t *testing.T) {
+	var calls int
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+
+		if calls == 1 {
+			w.Header().Set("Retry-After", "0")
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`{"success":false,"error":{"code":"RATE_LIMITED","message":"slow down"}}`))
+
+			return
+		}
+
+		_, _ = w.Write([]byte(`{"success":true,"data":{"ok":true}}`))
+	}))
+	defer srv.Close()
+
+	client := newTestClient(srv)
+
+	var out struct {
+		OK bool `json:"ok"`
+	}
+
+	if err := client.Do(t.Context(), http.MethodGet, "/x", nil, &out); err != nil {
+		t.Fatalf("Do returned error after a retryable 429: %v", err)
+	}
+
+	if calls != 2 {
+		t.Errorf("calls = %d, want 2 (one 429 then one success)", calls)
+	}
+
+	if !out.OK {
+		t.Error("response not decoded after retry")
+	}
+}
+
+func TestDoRateLimitExhausted(t *testing.T) {
+	var calls int
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Retry-After", "0")
+		w.WriteHeader(http.StatusTooManyRequests)
+		_, _ = w.Write([]byte(`{"success":false,"error":{"code":"RATE_LIMITED","message":"nope"}}`))
+	}))
+	defer srv.Close()
+
+	client := newTestClient(srv)
+
+	err := client.Do(t.Context(), http.MethodGet, "/x", nil, nil)
+	if !IsRateLimited(err) {
+		t.Fatalf("want RATE_LIMITED after exhausting retries, got %v", err)
+	}
+
+	if calls != maxRateLimitRetries+1 {
+		t.Errorf("calls = %d, want %d (initial + retries)", calls, maxRateLimitRetries+1)
+	}
+}
+
+func TestErrorHelpers(t *testing.T) {
+	if !IsConflict(&APIError{Code: "CONFLICT"}) {
+		t.Error("IsConflict(CONFLICT) = false")
+	}
+
+	if IsConflict(&APIError{Code: "NOT_FOUND"}) {
+		t.Error("IsConflict(NOT_FOUND) = true")
+	}
+
+	if !IsRateLimited(&APIError{Code: "RATE_LIMITED"}) {
+		t.Error("IsRateLimited(RATE_LIMITED) = false")
+	}
+
+	if IsConflict(nil) || IsRateLimited(nil) || IsNotFound(nil) {
+		t.Error("a nil error matched a code helper")
 	}
 }

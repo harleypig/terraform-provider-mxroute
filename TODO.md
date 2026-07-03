@@ -2,6 +2,12 @@
 
 ## Provider Setup
 
+- [ ] Fan out: refactor the 5 existing resources onto `models.go` and create
+  the new modules — catch-all, spam (settings/blacklist/whitelist), quota +
+  email-quota + verification-key data sources, reseller users/packages, and a
+  writable `mail_hosting` on `mxroute_domain` (`PATCH mail-status`).
+- [ ] GitHub issue templates (`.github/ISSUE_TEMPLATE/`): bug report + feature
+  request forms + `config.yml`.
 - [ ] Regenerate docs with tfplugindocs (blocked on the `generate` fix below);
   add `examples/` per resource.
 
