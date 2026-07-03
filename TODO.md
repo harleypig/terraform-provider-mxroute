@@ -2,9 +2,6 @@
 
 ## Provider Setup
 
-- [x] `models.go` — canonical types for every API component schema + inline
-  response shape; client hardening (all 8 error codes tested, rate-limit
-  retry via `Retry-After`/`X-RateLimit-Reset`, `IsConflict`/`IsRateLimited`).
 - [ ] Fan out: refactor the 5 existing resources onto `models.go` and create
   the new modules — catch-all, spam (settings/blacklist/whitelist), quota +
   email-quota + verification-key data sources, reseller users/packages, and a
