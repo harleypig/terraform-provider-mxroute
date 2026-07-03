@@ -34,10 +34,24 @@ gh secret set PASSPHRASE --repo harleypig/terraform-provider-mxroute
 
 ## Cutting a release
 
-Releases are **semver** (see the global `git.md`): `v0.y.z` is alpha (breakage
-expected, loose `y.z`); the `0 → 1` jump declares stability. **Do not tag
-before there is releasable code** — a published Registry version cannot be
-unpublished.
+Releases are **semver with the MAJOR aligned to the MXroute API's major** —
+the full policy (and why literal API-lockstep is rejected) is in
+[.claude/CONVENTIONS.md](.claude/CONVENTIONS.md) › *Versioning & tagging*. In
+short:
+
+- **MAJOR** = the API major you target (API `info.version` is `1.0.0` today →
+  major `1`); a breaking API `2.0.0` makes the next release `2.0.0`.
+- **MINOR / PATCH** move on the provider's own cadence — a new resource is a
+  minor, a fix/deps/docs release is a patch, both **without** an API version
+  change.
+- **Alpha now:** stay on `v0.y.z` (the API major is documented, not yet in the
+  tag); the deliberate `0 → 1` jump adopts the API major (first stable tag
+  `1.0.0`, targeting API `1.x`).
+- **Note the targeted API version** in the release — a `Compatibility: targets
+  MXroute API 1.x` line.
+
+**Do not tag before there is releasable code** — a published Registry version
+cannot be unpublished.
 
 1. Merge the work to `master`; ensure CI is green.
 2. Cut an **annotated** tag at the merge commit and push it (use the
