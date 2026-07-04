@@ -10,9 +10,6 @@
 - [ ] Promote the Go security/complexity tooling added here (`gosec`,
   `gocyclo`, the `govulncheck` CI job) into the global `go.md` /
   `golangci-lint.md` so every Go repo inherits it.
-- [x] Regenerate the Registry docs with tfplugindocs for all resources/data
-  sources (`make generate`); `docs/` is excluded from the markdown fixers so
-  it stays byte-identical to generation.
 
 ## Repo Setup
 
