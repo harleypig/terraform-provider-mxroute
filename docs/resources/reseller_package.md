@@ -43,3 +43,14 @@ Read-Only:
 - `email_forwarders` (Number) Maximum number of email forwarders; null when unlimited.
 - `quota_gb` (Number) Storage quota in gigabytes; null when the quota is unlimited.
 - `quota_unlimited` (Boolean) Whether the storage quota is unlimited.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A reseller package is imported by its name.
+terraform import mxroute_reseller_package.example my-package
+```

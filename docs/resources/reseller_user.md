@@ -37,3 +37,14 @@ Manages a reseller-managed user on the MXroute account. The `username` identifie
 - `quota_limit` (Number) The user's storage quota limit in megabytes; null when the quota is unlimited.
 - `quota_unlimited` (Boolean) Whether the user's quota is unlimited.
 - `quota_used` (Number) Current storage usage in megabytes.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A reseller user is imported by its username.
+terraform import mxroute_reseller_user.example someuser
+```

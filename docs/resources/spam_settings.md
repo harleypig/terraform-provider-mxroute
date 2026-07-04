@@ -23,3 +23,14 @@ Manages a domain's spam configuration on the MXroute account. This is a per-doma
 ### Read-Only
 
 - `id` (String) Resource identifier — the domain name.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A domain's spam settings are imported by its domain.
+terraform import mxroute_spam_settings.example example.com
+```
