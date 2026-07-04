@@ -10,9 +10,6 @@
 
 ## Repo Setup
 
-- [x] Release signing + `v0.1.0`: GPG key, `GPG_PRIVATE_KEY`/`PASSPHRASE`
-  secrets, and the tag — the release workflow built and GPG-signed all
-  platforms and published the GitHub release (`v0.1.0`).
 - [ ] Register the provider on the Terraform Registry (see
   [RELEASING.md](RELEASING.md)): sign in, **Publish → Provider →** add
   `harleypig/terraform-provider-mxroute`, upload the GPG public key. The
