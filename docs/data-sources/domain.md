@@ -30,4 +30,4 @@ data "mxroute_domain" "example" {
 - `id` (String) Data source identifier — the domain name.
 - `mail_hosting` (Boolean) Whether mail hosting is enabled for the domain.
 - `pointers` (List of String) Domain pointers (aliases) that resolve to this domain.
-- `ssl_enabled` (Boolean) Whether SSL is enabled for the domain.
+- `ssl_enabled` (Boolean) Whether SSL is enabled for the domain. Server-managed via MXroute's AutoSSL: typically `false` immediately after a domain is created and becomes `true` asynchronously — often within ~24 hours — once the certificate is issued.

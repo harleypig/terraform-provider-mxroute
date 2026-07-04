@@ -15,10 +15,20 @@ MXroute shipped a public REST API (v1.0.0) but has no Terraform provider. This
 brings MXroute account management under Terraform, so email hosting is managed
 as code alongside the rest of the infrastructure.
 
+## Requirements
+
+- **Terraform >= 1.11.** The `mxroute_email_account` and `mxroute_reseller_user`
+  resources use [write-only arguments][wo], which Terraform added in 1.11. The
+  provider has no other version-gated features, so 1.11 is the baseline for the
+  whole provider.
+
+[wo]: https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments
+
 ## Development
 
 A local `go` **≥ 1.21** is enough — `go.mod` pins the toolchain and
-`GOTOOLCHAIN=auto` fetches it. Terraform **≥ 1.0**.
+`GOTOOLCHAIN=auto` fetches it. Terraform **≥ 1.11** (write-only arguments are
+exercised by the docs generation and acceptance tests; see *Requirements*).
 
 ```sh
 go build ./...     # build

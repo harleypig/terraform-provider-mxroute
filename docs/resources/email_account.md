@@ -43,9 +43,9 @@ resource "mxroute_email_account" "example" {
 
 ### Optional
 
-- `limit` (Number) Daily outbound send limit. Computed from the server when not set.
+- `limit` (Number) Daily outbound send limit. Optional; when unset, the mailbox is created with the [MXroute API](https://api.mxroute.com/docs) default of `9600` and the applied value is read back from the server.
 - `password_wo_version` (Number) Version trigger for `password_wo`. Because a write-only value cannot be diffed, increment this whenever `password_wo` changes so the new password is sent on update.
-- `quota` (Number) Mailbox storage quota in megabytes. Computed from the server when not set.
+- `quota` (Number) Mailbox storage quota in megabytes (`0` = unlimited). Optional; when unset, the mailbox is created with the [MXroute API](https://api.mxroute.com/docs) default of `1024` and the applied value is read back from the server.
 
 ### Read-Only
 

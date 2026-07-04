@@ -33,7 +33,7 @@ resource "mxroute_domain" "example" {
 
 - `id` (String) Resource identifier — the domain name.
 - `pointers` (List of String) Domain pointers (aliases) that resolve to this domain.
-- `ssl_enabled` (Boolean) Whether SSL is enabled for the domain.
+- `ssl_enabled` (Boolean) Whether SSL is enabled for the domain. Server-managed via MXroute's AutoSSL, so this attribute is read-only (there is no API input to set it): it is typically `false` immediately after a domain is created and becomes `true` asynchronously — often within ~24 hours — once the certificate is issued.
 
 ## Import
 

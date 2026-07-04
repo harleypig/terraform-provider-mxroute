@@ -3,12 +3,12 @@
 page_title: "mxroute_reseller_package Resource - mxroute"
 subcategory: ""
 description: |-
-  Manages a reseller package on the MXroute account. Requires a reseller account. Limit attributes are strings (for example "5" or "unlimited"); the configured value is the source of truth, and the computed settings object exposes the typed limits MXroute parsed from them.
+  Manages a reseller package on the MXroute account. Requires a reseller account. Limit attributes are strings (for example "5" or "unlimited"); the configured value is the source of truth, and the computed settings object exposes the typed limits MXroute parsed from them. Each limit's create-time default (stated per attribute below) comes from the MXroute API https://api.mxroute.com/docs.
 ---
 
 # mxroute_reseller_package (Resource)
 
-Manages a reseller package on the MXroute account. Requires a reseller account. Limit attributes are strings (for example `"5"` or `"unlimited"`); the configured value is the source of truth, and the computed `settings` object exposes the typed limits MXroute parsed from them.
+Manages a reseller package on the MXroute account. Requires a reseller account. Limit attributes are strings (for example `"5"` or `"unlimited"`); the configured value is the source of truth, and the computed `settings` object exposes the typed limits MXroute parsed from them. Each limit's create-time default (stated per attribute below) comes from the [MXroute API](https://api.mxroute.com/docs).
 
 
 
@@ -21,11 +21,11 @@ Manages a reseller package on the MXroute account. Requires a reseller account. 
 
 ### Optional
 
-- `domain_pointers` (String) Maximum number of domain pointers, as a string (for example `"10"` or `"unlimited"`). When unset, it is populated from the package's current settings.
-- `domains` (String) Maximum number of domains, as a string (for example `"10"` or `"unlimited"`). When unset, it is populated from the package's current settings.
-- `email_accounts` (String) Maximum number of email accounts, as a string (for example `"50"` or `"unlimited"`). When unset, it is populated from the package's current settings.
-- `email_forwarders` (String) Maximum number of email forwarders, as a string (for example `"50"` or `"unlimited"`). When unset, it is populated from the package's current settings.
-- `quota` (String) Storage quota granted by the package, as a string (for example `"5"` for 5 GB, or `"unlimited"`). When unset, it is populated from the package's current settings.
+- `domain_pointers` (String) Maximum number of domain pointers, as a string (for example `"10"` or `"unlimited"`). When unset, it is populated from the package's current settings; the API default for a new package is `"10"`.
+- `domains` (String) Maximum number of domains, as a string (for example `"10"` or `"unlimited"`). When unset, it is populated from the package's current settings; the API default for a new package is `"1"`.
+- `email_accounts` (String) Maximum number of email accounts, as a string (for example `"50"` or `"unlimited"`). When unset, it is populated from the package's current settings; the API default for a new package is `"100"`.
+- `email_forwarders` (String) Maximum number of email forwarders, as a string (for example `"50"` or `"unlimited"`). When unset, it is populated from the package's current settings; the API default for a new package is `"100"`.
+- `quota` (String) Storage quota granted by the package, as a string (for example `"5"` for 5 GB, or `"unlimited"`). When unset, it is populated from the package's current settings; the API default for a new package is `"1"` (1 GB).
 
 ### Read-Only
 
