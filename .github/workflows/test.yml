@@ -76,8 +76,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Terraform versions
+        # Terraform versions — 1.11 is the declared minimum (write-only args).
         terraform:
+          - '1.11.*'
           - '1.13.*'
           - '1.14.*'
     steps:
