@@ -34,7 +34,7 @@ resource "mxroute_pointer" "example" {
 
 ### Optional
 
-- `alias` (Boolean) Whether the pointer is an alias (`true`) or a redirect (`false`). Defaults to `true`.
+- `alias` (Boolean) Whether the pointer is an alias (`true`) or a redirect (`false`). Optional; the [MXroute API](https://api.mxroute.com/docs) default is `true` (creates an alias).
 
 ### Read-Only
 

@@ -97,7 +97,7 @@ func (r *EmailAccountResource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional:            true,
 			},
 			"quota": schema.Int64Attribute{
-				MarkdownDescription: "Mailbox storage quota in megabytes. Computed from the server when not set.",
+				MarkdownDescription: "Mailbox storage quota in megabytes (`0` = unlimited). Optional; when unset, the mailbox is created with the [MXroute API](https://api.mxroute.com/docs) default of `1024` and the applied value is read back from the server.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Int64{
@@ -105,7 +105,7 @@ func (r *EmailAccountResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"limit": schema.Int64Attribute{
-				MarkdownDescription: "Daily outbound send limit. Computed from the server when not set.",
+				MarkdownDescription: "Daily outbound send limit. Optional; when unset, the mailbox is created with the [MXroute API](https://api.mxroute.com/docs) default of `9600` and the applied value is read back from the server.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Int64{

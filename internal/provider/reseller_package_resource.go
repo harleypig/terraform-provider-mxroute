@@ -99,7 +99,7 @@ func (r *ResellerPackageResource) Metadata(ctx context.Context, req resource.Met
 
 func (r *ResellerPackageResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a reseller package on the MXroute account. Requires a reseller account. Limit attributes are strings (for example `\"5\"` or `\"unlimited\"`); the configured value is the source of truth, and the computed `settings` object exposes the typed limits MXroute parsed from them.",
+		MarkdownDescription: "Manages a reseller package on the MXroute account. Requires a reseller account. Limit attributes are strings (for example `\"5\"` or `\"unlimited\"`); the configured value is the source of truth, and the computed `settings` object exposes the typed limits MXroute parsed from them. Each limit's create-time default (stated per attribute below) comes from the [MXroute API](https://api.mxroute.com/docs).",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The package name. MXroute keys a package by name and exposes no rename, so changing `name` replaces the resource.",
@@ -109,7 +109,7 @@ func (r *ResellerPackageResource) Schema(ctx context.Context, req resource.Schem
 				},
 			},
 			"quota": schema.StringAttribute{
-				MarkdownDescription: "Storage quota granted by the package, as a string (for example `\"5\"` for 5 GB, or `\"unlimited\"`). When unset, it is populated from the package's current settings.",
+				MarkdownDescription: "Storage quota granted by the package, as a string (for example `\"5\"` for 5 GB, or `\"unlimited\"`). When unset, it is populated from the package's current settings; the API default for a new package is `\"1\"` (1 GB).",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -117,7 +117,7 @@ func (r *ResellerPackageResource) Schema(ctx context.Context, req resource.Schem
 				},
 			},
 			"domains": schema.StringAttribute{
-				MarkdownDescription: "Maximum number of domains, as a string (for example `\"10\"` or `\"unlimited\"`). When unset, it is populated from the package's current settings.",
+				MarkdownDescription: "Maximum number of domains, as a string (for example `\"10\"` or `\"unlimited\"`). When unset, it is populated from the package's current settings; the API default for a new package is `\"1\"`.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -125,7 +125,7 @@ func (r *ResellerPackageResource) Schema(ctx context.Context, req resource.Schem
 				},
 			},
 			"email_accounts": schema.StringAttribute{
-				MarkdownDescription: "Maximum number of email accounts, as a string (for example `\"50\"` or `\"unlimited\"`). When unset, it is populated from the package's current settings.",
+				MarkdownDescription: "Maximum number of email accounts, as a string (for example `\"50\"` or `\"unlimited\"`). When unset, it is populated from the package's current settings; the API default for a new package is `\"100\"`.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -133,7 +133,7 @@ func (r *ResellerPackageResource) Schema(ctx context.Context, req resource.Schem
 				},
 			},
 			"email_forwarders": schema.StringAttribute{
-				MarkdownDescription: "Maximum number of email forwarders, as a string (for example `\"50\"` or `\"unlimited\"`). When unset, it is populated from the package's current settings.",
+				MarkdownDescription: "Maximum number of email forwarders, as a string (for example `\"50\"` or `\"unlimited\"`). When unset, it is populated from the package's current settings; the API default for a new package is `\"100\"`.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -141,7 +141,7 @@ func (r *ResellerPackageResource) Schema(ctx context.Context, req resource.Schem
 				},
 			},
 			"domain_pointers": schema.StringAttribute{
-				MarkdownDescription: "Maximum number of domain pointers, as a string (for example `\"10\"` or `\"unlimited\"`). When unset, it is populated from the package's current settings.",
+				MarkdownDescription: "Maximum number of domain pointers, as a string (for example `\"10\"` or `\"unlimited\"`). When unset, it is populated from the package's current settings; the API default for a new package is `\"10\"`.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{

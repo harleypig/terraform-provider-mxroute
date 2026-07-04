@@ -23,3 +23,14 @@ Manages a single entry in a mail domain's spam blacklist on the MXroute account.
 ### Read-Only
 
 - `id` (String) Resource identifier — `<domain>/<entry>`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A blacklist entry is imported by "<domain>/<entry>".
+terraform import mxroute_spam_blacklist_entry.example example.com/spammer@bad.example
+```

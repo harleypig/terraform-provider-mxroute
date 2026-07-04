@@ -23,3 +23,14 @@ Manages a single entry in a domain's spam whitelist. The whitelist is a set of a
 ### Read-Only
 
 - `id` (String) Resource identifier — `<domain>/<entry>`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# A whitelist entry is imported by "<domain>/<entry>".
+terraform import mxroute_spam_whitelist_entry.example example.com/friend@good.example
+```

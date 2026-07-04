@@ -72,7 +72,7 @@ func (r *PointerResource) Schema(ctx context.Context, req resource.SchemaRequest
 				},
 			},
 			"alias": schema.BoolAttribute{
-				MarkdownDescription: "Whether the pointer is an alias (`true`) or a redirect (`false`). Defaults to `true`.",
+				MarkdownDescription: "Whether the pointer is an alias (`true`) or a redirect (`false`). Optional; the [MXroute API](https://api.mxroute.com/docs) default is `true` (creates an alias).",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
