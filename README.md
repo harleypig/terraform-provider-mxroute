@@ -29,6 +29,9 @@ make testacc       # acceptance tests (TF_ACC=1; hits a real MXroute account)
 Acceptance tests need MXroute API credentials in the environment
 (`X-Server` / `X-Username` / `X-API-Key`).
 
+See [API-MAPPING.md](API-MAPPING.md) for how each MXroute API endpoint maps to
+the provider's resources and data sources.
+
 ## License
 
 [MIT](LICENSE).
