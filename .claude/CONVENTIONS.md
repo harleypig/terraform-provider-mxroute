@@ -66,7 +66,11 @@ the fix is usually a patch bump here.
 ## Merge policy & versioning
 
 - `master` is **PR-only** (server-side ruleset + the local `no-commit-to-branch`
-  hook).
+  hook). Required status checks: **`Build`** (build + golangci-lint) and
+  **`generate`** (tfplugindocs docs are current). `Acceptance Tests` and
+  `Vulnerability scan` run and report but are not required (they skip / can
+  fail on a newly-disclosed CVE without a code change). Merge methods: squash
+  or merge; 0 required reviewers (solo).
 - **Versioning:** semver `vX.Y.Z`, with the **MAJOR aligned to the MXroute
   API's major** (see *Versioning & tagging* below). A tag triggers the
   GoReleaser + GPG release that publishes to the Terraform Registry. Cut tags
