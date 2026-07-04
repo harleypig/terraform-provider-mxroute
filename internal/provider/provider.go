@@ -127,10 +127,14 @@ func (p *MxrouteProvider) Resources(ctx context.Context) []func() resource.Resou
 func (p *MxrouteProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewDomainDataSource,
+		NewDomainsDataSource,
 		NewDNSDataSource,
+		NewEmailAccountsDataSource,
 		NewQuotaDataSource,
 		NewEmailQuotaDataSource,
 		NewVerificationKeyDataSource,
+		NewResellerPackagesDataSource,
+		NewResellerUsersDataSource,
 	}
 }
 

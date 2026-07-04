@@ -29,11 +29,22 @@ per-resource docs under `docs/`.
 
 | Data source | Read |
 |-------------|------|
-| `mxroute_domain` | `GET /domains/{domain}` |
+| `mxroute_domain` | `GET /domains/{domain}` (one domain) |
+| `mxroute_domains` | `GET /domains` (all domain names) |
 | `mxroute_dns` | `GET /domains/{domain}/dns` |
+| `mxroute_email_accounts` | `GET /domains/{domain}/email-accounts` (a domain's mailboxes) |
 | `mxroute_quota` | `GET /quota` |
 | `mxroute_email_quota` | `GET /quota/email` |
 | `mxroute_verification_key` | `GET /verification-key` |
+| `mxroute_reseller_packages` | `GET /reseller/packages` (all package names) |
+| `mxroute_reseller_users` | `GET /reseller/users` (all usernames) |
+
+The **plural** data sources (`mxroute_domains`, `mxroute_email_accounts`,
+`mxroute_reseller_packages`, `mxroute_reseller_users`) list every object; the
+**singular** counterpart (`mxroute_domain`, the `mxroute_email_account`
+resource, …) reads one by key. `GET /domains`, `/reseller/packages`, and
+`/reseller/users` return only **names**; `GET …/email-accounts` returns full
+mailbox objects.
 
 ## Non-obvious mappings
 
@@ -54,16 +65,9 @@ per-resource docs under `docs/`.
   `POST`/`GET`/`PATCH`/`DELETE` plus `PATCH …/package` (change package),
   `POST …/suspend` and `POST …/unsuspend` (the `suspended` attribute).
 
-## Endpoints not (yet) mapped
+## Endpoint coverage
 
-The `list` GETs below back no data source — the matching resource reads a
-single object (or, for list-filter resources above, uses its own list
-endpoint). They are candidates for future **plural** data sources (e.g. a
-`mxroute_domains` that lists all domains):
-
-| Endpoint | Why unmapped |
-|----------|--------------|
-| `GET /domains` | `mxroute_domain` reads a single domain; no plural data source yet |
-| `GET /domains/{domain}/email-accounts` | `mxroute_email_account` reads a single mailbox; no plural data source yet |
-| `GET /reseller/packages` | `mxroute_reseller_package` reads a single package |
-| `GET /reseller/users` | `mxroute_reseller_user` reads a single user |
+**Every** MXroute API endpoint is now mapped to a resource or data source —
+the four former `list`-GET gaps are covered by the plural data sources above.
+Keep it that way: when the API gains an endpoint, add the resource/data source
+and a row here.
