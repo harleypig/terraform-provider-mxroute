@@ -1,0 +1,69 @@
+# API endpoint ↔ provider mapping
+
+How the MXroute REST API (<https://api.mxroute.com/docs>) maps onto this
+provider's resources and data sources. The relationship is not one-to-one: a
+single resource can drive several endpoints (e.g. `mxroute_domain` also
+toggles mail hosting), and some endpoints are deliberately unused (the
+`list` GETs, since most reads use a single-object GET or a list-filter).
+
+This file is **hand-maintained** — update it when an endpoint or a
+resource/data source changes. It is the design map behind the generated
+per-resource docs under `docs/`.
+
+## Resources
+
+| Resource | Create | Read | Update | Delete |
+|----------|--------|------|--------|--------|
+| `mxroute_domain` | `POST /domains` | `GET /domains/{domain}` | `PATCH /domains/{domain}/mail-status` (mail hosting) | `DELETE /domains/{domain}` |
+| `mxroute_email_account` | `POST /domains/{domain}/email-accounts` | `GET /domains/{domain}/email-accounts/{user}` | `PATCH /domains/{domain}/email-accounts/{user}` | `DELETE /domains/{domain}/email-accounts/{user}` |
+| `mxroute_forwarder` | `POST /domains/{domain}/forwarders` | `GET /domains/{domain}/forwarders` (list, filter by alias) | — (RequiresReplace) | `DELETE /domains/{domain}/forwarders/{alias}` |
+| `mxroute_pointer` | `POST /domains/{domain}/pointers` | `GET /domains/{domain}/pointers` (list, filter by pointer) | — (RequiresReplace) | `DELETE /domains/{domain}/pointers/{pointer}` |
+| `mxroute_catch_all` | `PATCH /domains/{domain}/catch-all` | `GET /domains/{domain}/catch-all` | `PATCH /domains/{domain}/catch-all` | `PATCH /domains/{domain}/catch-all` (reset to `fail`) |
+| `mxroute_spam_settings` | `PATCH /domains/{domain}/spam/settings` | `GET /domains/{domain}/spam/settings` | `PATCH /domains/{domain}/spam/settings` | — (no endpoint; state-only) |
+| `mxroute_spam_blacklist_entry` | `POST /domains/{domain}/spam/blacklist` | `GET /domains/{domain}/spam/blacklist` (list, filter by entry) | — (RequiresReplace) | `DELETE /domains/{domain}/spam/blacklist/{entry}` |
+| `mxroute_spam_whitelist_entry` | `POST /domains/{domain}/spam/whitelist` | `GET /domains/{domain}/spam/whitelist` (list, filter by entry) | — (RequiresReplace) | `DELETE /domains/{domain}/spam/whitelist/{entry}` |
+| `mxroute_reseller_package` | `POST /reseller/packages` | `GET /reseller/packages/{name}` | `PATCH /reseller/packages/{name}` | `DELETE /reseller/packages/{name}` |
+| `mxroute_reseller_user` | `POST /reseller/users` | `GET /reseller/users/{username}` | `PATCH /reseller/users/{username}` · `PATCH /reseller/users/{username}/package` · `POST /reseller/users/{username}/suspend` · `POST /reseller/users/{username}/unsuspend` | `DELETE /reseller/users/{username}` |
+
+## Data sources
+
+| Data source | Read |
+|-------------|------|
+| `mxroute_domain` | `GET /domains/{domain}` |
+| `mxroute_dns` | `GET /domains/{domain}/dns` |
+| `mxroute_quota` | `GET /quota` |
+| `mxroute_email_quota` | `GET /quota/email` |
+| `mxroute_verification_key` | `GET /verification-key` |
+
+## Non-obvious mappings
+
+- **Singletons** (`mxroute_catch_all`, `mxroute_spam_settings`) — a per-domain
+  setting with no create/delete verb. `Create` and `Update` are both the
+  `PATCH`; `Read` is the `GET`. `catch_all` `Delete` resets the policy to
+  `fail` (the API default); `spam_settings` has **no** DELETE endpoint, so its
+  `Delete` only drops the resource from Terraform state (the domain's settings
+  are left as-is).
+- **List-filter reads** (`mxroute_forwarder`, `mxroute_pointer`,
+  `mxroute_spam_blacklist_entry`, `mxroute_spam_whitelist_entry`) — the API has
+  no single-object GET for these, so `Read` fetches the whole list endpoint and
+  filters for this entry by its key. These have no `Update` (any change is a
+  `RequiresReplace` = delete + create).
+- **`mxroute_domain` update** is only the `mail-status` toggle — `mail_hosting`
+  is the sole mutable attribute; `domain` itself is `RequiresReplace`.
+- **`mxroute_reseller_user`** spans several endpoints: the base
+  `POST`/`GET`/`PATCH`/`DELETE` plus `PATCH …/package` (change package),
+  `POST …/suspend` and `POST …/unsuspend` (the `suspended` attribute).
+
+## Endpoints not (yet) mapped
+
+The `list` GETs below back no data source — the matching resource reads a
+single object (or, for list-filter resources above, uses its own list
+endpoint). They are candidates for future **plural** data sources (e.g. a
+`mxroute_domains` that lists all domains):
+
+| Endpoint | Why unmapped |
+|----------|--------------|
+| `GET /domains` | `mxroute_domain` reads a single domain; no plural data source yet |
+| `GET /domains/{domain}/email-accounts` | `mxroute_email_account` reads a single mailbox; no plural data source yet |
+| `GET /reseller/packages` | `mxroute_reseller_package` reads a single package |
+| `GET /reseller/users` | `mxroute_reseller_user` reads a single user |
