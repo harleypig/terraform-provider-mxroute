@@ -102,6 +102,15 @@ pending work:
   resources are covered, but three data sources lack an example `mxroute_quota`,
   `mxroute_email_quota`, `mxroute_verification_key` -- add a `data-source.tf`
   for each and regenerate docs.
+- [ ] Flesh out the provider **Overview** on the registry.terraform.io landing
+  page. It renders `docs/index.md`, generated from `templates/index.md.tmpl`
+  (plus the provider schema) — currently only a two-sentence blurb before
+  Requirements/Example Usage. Expand the template's prose into a proper
+  overview: what the provider manages (the resource/data-source catalog by
+  area — domains, mailboxes, forwarders/pointers, catch-all, spam, reseller),
+  the auth model (three headers with `MXROUTE_*` env-var fallback), the
+  write-only password handling, and links to the MXroute API/docs. Then
+  regenerate `docs/index.md` (`make generate`) and confirm it via CI `generate`.
 
 ### Live-API investigations (via acceptance tests)
 
