@@ -337,8 +337,7 @@ func (r *ResellerUserResource) Delete(ctx context.Context, req resource.DeleteRe
 }
 
 func (r *ResellerUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("username"), req.ID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	importSingleKey(ctx, req, resp, "username")
 }
 
 // fetchResellerUser GETs a single reseller user, returning (nil, nil) when it

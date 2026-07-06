@@ -214,8 +214,7 @@ func (r *CatchAllResource) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 func (r *CatchAllResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("domain"), req.ID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	importSingleKey(ctx, req, resp, "domain")
 }
 
 // fetchCatchAll GETs a domain's catch-all policy, returning (nil, nil) when
