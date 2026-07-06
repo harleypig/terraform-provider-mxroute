@@ -13,10 +13,13 @@ import (
 // TestAccResellerUserResource_createRequiresPassword verifies that creating a
 // reseller user without password_wo fails with a clear error — password_wo is
 // now Optional (so an existing user need not carry it) but the API requires a
-// password to create one. The create-time guard fires before any API call, so
-// this needs no live reseller account.
+// password to create one. The guard fires in Create (apply time), so this
+// needs the provider configured; PreCheck skips it when credentials are absent
+// (e.g. the default CI gate). The guard itself precedes any reseller API call,
+// so no reseller account is required when credentials are present.
 func TestAccResellerUserResource_createRequiresPassword(t *testing.T) {
 	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
