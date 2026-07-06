@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -13,32 +12,7 @@ import (
 // domain's spam whitelist after the test.
 func testAccCheckSpamWhitelistEntryDestroy(t *testing.T, domain, entry string) resource.TestCheckFunc {
 	return func(_ *terraform.State) error {
-		client := NewClient(ClientConfig{
-			Server:   os.Getenv("MXROUTE_SERVER"),
-			Username: os.Getenv("MXROUTE_USERNAME"),
-			APIKey:   os.Getenv("MXROUTE_API_KEY"),
-		})
-
-		var whitelist []string
-
-		err := client.Do(t.Context(), "GET", "/domains/"+domain+"/spam/whitelist", nil, &whitelist)
-		if err != nil {
-			// The parent domain is destroyed by its own resource, so a missing
-			// domain means the entry is gone too.
-			if IsNotFound(err) {
-				return nil
-			}
-
-			return fmt.Errorf("checking spam whitelist entry destroy: %w", err)
-		}
-
-		for _, candidate := range whitelist {
-			if candidate == entry {
-				return fmt.Errorf("spam whitelist entry %q still exists after destroy", entry)
-			}
-		}
-
-		return nil
+		return checkGoneInList(t, "/domains/"+domain+"/spam/whitelist", fmt.Sprintf("spam whitelist entry %q on domain %q", entry, domain), func(e *string) bool { return *e == entry })
 	}
 }
 

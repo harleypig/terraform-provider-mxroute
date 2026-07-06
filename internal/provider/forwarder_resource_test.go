@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -12,31 +11,7 @@ import (
 // testAccCheckForwarderDestroy confirms the forwarder is gone after the test.
 func testAccCheckForwarderDestroy(t *testing.T, domain, alias string) resource.TestCheckFunc {
 	return func(_ *terraform.State) error {
-		client := NewClient(ClientConfig{
-			Server:   os.Getenv("MXROUTE_SERVER"),
-			Username: os.Getenv("MXROUTE_USERNAME"),
-			APIKey:   os.Getenv("MXROUTE_API_KEY"),
-		})
-
-		var forwarders []Forwarder
-
-		err := client.Do(t.Context(), "GET", "/domains/"+domain+"/forwarders", nil, &forwarders)
-		if err != nil {
-			// The parent domain being gone also means the forwarder is gone.
-			if IsNotFound(err) {
-				return nil
-			}
-
-			return fmt.Errorf("checking forwarder destroy: %w", err)
-		}
-
-		for i := range forwarders {
-			if forwarders[i].Alias == alias {
-				return fmt.Errorf("forwarder %q on domain %q still exists after destroy", alias, domain)
-			}
-		}
-
-		return nil
+		return checkGoneInList(t, "/domains/"+domain+"/forwarders", fmt.Sprintf("forwarder %q on domain %q", alias, domain), func(f *Forwarder) bool { return f.Alias == alias })
 	}
 }
 

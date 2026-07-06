@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -20,30 +19,7 @@ import (
 // if it differs.
 func testAccCheckSpamBlacklistEntryDestroy(t *testing.T, domain, entry string) resource.TestCheckFunc {
 	return func(_ *terraform.State) error {
-		client := NewClient(ClientConfig{
-			Server:   os.Getenv("MXROUTE_SERVER"),
-			Username: os.Getenv("MXROUTE_USERNAME"),
-			APIKey:   os.Getenv("MXROUTE_API_KEY"),
-		})
-
-		var list []string
-
-		err := client.Do(t.Context(), "GET", "/domains/"+domain+"/spam/blacklist", nil, &list)
-		if err != nil {
-			if IsNotFound(err) {
-				return nil
-			}
-
-			return fmt.Errorf("checking spam blacklist entry destroy: %w", err)
-		}
-
-		for _, e := range list {
-			if e == entry {
-				return fmt.Errorf("blacklist entry %q still exists on domain %q after destroy", entry, domain)
-			}
-		}
-
-		return nil
+		return checkGoneInList(t, "/domains/"+domain+"/spam/blacklist", fmt.Sprintf("blacklist entry %q on domain %q", entry, domain), func(e *string) bool { return *e == entry })
 	}
 }
 

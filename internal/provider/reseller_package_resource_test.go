@@ -29,24 +29,7 @@ func testAccResellerPackageName(t *testing.T) string {
 // test.
 func testAccCheckResellerPackageDestroy(t *testing.T, name string) resource.TestCheckFunc {
 	return func(_ *terraform.State) error {
-		client := NewClient(ClientConfig{
-			Server:   os.Getenv("MXROUTE_SERVER"),
-			Username: os.Getenv("MXROUTE_USERNAME"),
-			APIKey:   os.Getenv("MXROUTE_API_KEY"),
-		})
-
-		var api Package
-
-		err := client.Do(t.Context(), "GET", "/reseller/packages/"+name, nil, &api)
-		if err == nil {
-			return fmt.Errorf("reseller package %q still exists after destroy", name)
-		}
-
-		if !IsNotFound(err) {
-			return fmt.Errorf("checking reseller package destroy: %w", err)
-		}
-
-		return nil
+		return checkGoneSingle[Package](t, "/reseller/packages/"+name, fmt.Sprintf("reseller package %q", name))
 	}
 }
 
