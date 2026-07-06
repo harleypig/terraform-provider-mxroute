@@ -147,21 +147,9 @@ func (r *ResellerUserResource) Schema(ctx context.Context, req resource.SchemaRe
 }
 
 func (r *ResellerUserResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if client := configureResourceClient(req, resp); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
 }
 
 func (r *ResellerUserResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
