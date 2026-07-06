@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -53,6 +56,7 @@ type createEmailAccountRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Quota    *int64 `json:"quota,omitempty"`
+	Limit    *int64 `json:"limit,omitempty"`
 }
 
 // updateEmailAccountRequest is the PATCH email-account body; every field is
@@ -77,6 +81,9 @@ func (r *EmailAccountResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "The mailbox password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. **Required when creating** a mailbox; it may be omitted for a mailbox that already exists, in which case the password is left unchanged. To rotate the password on an existing mailbox, set the new value and bump `password_wo_version`.",
 				Optional:            true,
 				WriteOnly:           true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(8),
+				},
 			},
 			"password_wo_version": schema.Int64Attribute{
 				MarkdownDescription: "Version trigger for `password_wo`. Because a write-only value cannot be diffed, increment this whenever `password_wo` changes so the new password is sent on update.",
@@ -94,6 +101,9 @@ func (r *EmailAccountResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "Daily outbound send limit. Optional; when unset, the mailbox is created with the [MXroute API](https://api.mxroute.com/docs) default of `9600` and the applied value is read back from the server.",
 				Optional:            true,
 				Computed:            true,
+				Validators: []validator.Int64{
+					int64validator.AtMost(9600),
+				},
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -162,6 +172,7 @@ func (r *EmailAccountResource) Create(ctx context.Context, req resource.CreateRe
 		Username: username,
 		Password: password.ValueString(),
 		Quota:    int64PtrFromValue(plan.Quota),
+		Limit:    int64PtrFromValue(plan.Limit),
 	}
 
 	if err := r.client.Do(ctx, http.MethodPost, "/domains/"+domain+"/email-accounts", body, nil); err != nil {
