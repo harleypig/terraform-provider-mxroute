@@ -5,7 +5,7 @@ Open, actionable work only. Decisions already made live in
 
 ## Registry docs
 
-- [ ] Flesh out the provider **Overview** on the registry.terraform.io
+- [x] Flesh out the provider **Overview** on the registry.terraform.io
   landing page. It renders `docs/index.md`, generated from
   `templates/index.md.tmpl` (plus the provider schema) — currently only a
   two-sentence blurb before Requirements/Example Usage. Expand the template's
