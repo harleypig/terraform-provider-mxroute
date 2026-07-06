@@ -103,6 +103,21 @@ httptest seam), so demon's wins are structural/ergonomic, not a reason to swap.
   and `mxroute_reseller_user`; and list `mxroute_pointers`, `mxroute_forwarders`,
   `mxroute_spam_blacklist`, `mxroute_spam_whitelist`.
 
+### Endpoint coverage (what BOTH providers miss)
+
+- [ ] Cross-check the **live** OpenAPI spec
+  (`https://api.mxroute.com/openapi.yaml`, ~32 paths / ~71 operations) against
+  what **both** providers implement. Demon was built from a **stale**
+  `spec.json` (26 paths / 43 ops), and the comparison only surfaced what each
+  provider has that the *other* lacks — so any endpoint absent from **both**
+  went unnoticed. Diff the live spec's operations against our registered
+  resources/data sources (and demon's) to find **unimplemented** MXroute
+  capabilities worth adding as new resources/data sources. Distinct from the
+  "audit each resource against the spec" item above (that refines what we
+  *have*; this finds what *neither* provider has). Pull the live spec with the
+  three `MXROUTE_*` creds (it is auth-gated: `curl -H X-Server/X-Username/
+  X-API-Key https://api.mxroute.com/openapi.yaml`).
+
 ### CI & governance
 
 - [ ] Resolve the CI credential gap: decide and document whether to wire
