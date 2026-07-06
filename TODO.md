@@ -89,23 +89,6 @@ the correctness/security edge (write-only passwords, the real
 `{success,data,error}` envelope, 429-only retry, idempotent deletes, an
 httptest seam), so demon's wins are structural/ergonomic, not a reason to swap.
 
-### Correctness fixes (present in the released v0.2.0)
-
-- [x] `url.PathEscape` the spam blacklist/whitelist entry DELETE paths — done
-  via a shared `pathSeg` helper applied to every user-controlled leaf segment
-  (spam entry, forwarder alias, pointer, mailbox username, reseller name /
-  username); `domain` is left raw (validated DNS hostname). `TestPathSeg`
-  regression test. Note: `url.PathEscape` encodes `*` and the dangerous
-  `/ # ? space` but leaves `@`/`+` (RFC pchar) — see the live-API item below.
-- [x] Fix the `catch_all` empty-string validation hole — done:
-  `catchAllAddressSet` counts null/unknown/**empty-string** as unset, so
-  `type = address` with `""` is rejected and `type = fail`/`blackhole` with
-  `""` no longer wrongly errors. Unit test covers all four cases.
-- [x] Change `mxroute_forwarder.destinations` from `List` to `Set` (with
-  `setvalidator.SizeAtLeast(1)`) — done; stops the API's destination reordering
-  from forcing a destroy/recreate. Breaking schema change (alpha v0). harleydev's
-  fan-out forwarders are handled separately in that repo.
-
 ### Ergonomics & DRY
 
 The DRY pass itself is done (merged); these decisions from it are kept — not
