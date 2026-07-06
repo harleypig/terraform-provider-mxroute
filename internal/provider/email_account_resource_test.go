@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"testing"
 
@@ -17,24 +16,7 @@ const testAccEmailAccountUsername = "tfacctest"
 // testAccCheckEmailAccountDestroy confirms the mailbox is gone after the test.
 func testAccCheckEmailAccountDestroy(t *testing.T, domain, username string) resource.TestCheckFunc {
 	return func(_ *terraform.State) error {
-		client := NewClient(ClientConfig{
-			Server:   os.Getenv("MXROUTE_SERVER"),
-			Username: os.Getenv("MXROUTE_USERNAME"),
-			APIKey:   os.Getenv("MXROUTE_API_KEY"),
-		})
-
-		var api EmailAccount
-
-		err := client.Do(t.Context(), "GET", "/domains/"+domain+"/email-accounts/"+username, nil, &api)
-		if err == nil {
-			return fmt.Errorf("email account %q on %q still exists after destroy", username, domain)
-		}
-
-		if !IsNotFound(err) {
-			return fmt.Errorf("checking email account destroy: %w", err)
-		}
-
-		return nil
+		return checkGoneSingle[EmailAccount](t, "/domains/"+domain+"/email-accounts/"+username, fmt.Sprintf("email account %q on %q", username, domain))
 	}
 }
 

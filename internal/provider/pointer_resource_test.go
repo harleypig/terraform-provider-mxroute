@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -14,30 +13,7 @@ import (
 // as gone.
 func testAccCheckPointerDestroy(t *testing.T, domain, pointer string) resource.TestCheckFunc {
 	return func(_ *terraform.State) error {
-		client := NewClient(ClientConfig{
-			Server:   os.Getenv("MXROUTE_SERVER"),
-			Username: os.Getenv("MXROUTE_USERNAME"),
-			APIKey:   os.Getenv("MXROUTE_API_KEY"),
-		})
-
-		var list []DomainPointer
-
-		err := client.Do(t.Context(), "GET", "/domains/"+domain+"/pointers", nil, &list)
-		if err != nil {
-			if IsNotFound(err) {
-				return nil
-			}
-
-			return fmt.Errorf("checking pointer destroy: %w", err)
-		}
-
-		for i := range list {
-			if list[i].Pointer == pointer {
-				return fmt.Errorf("pointer %q still exists on domain %q after destroy", pointer, domain)
-			}
-		}
-
-		return nil
+		return checkGoneInList(t, "/domains/"+domain+"/pointers", fmt.Sprintf("pointer %q on domain %q", pointer, domain), func(p *DomainPointer) bool { return p.Pointer == pointer })
 	}
 }
 

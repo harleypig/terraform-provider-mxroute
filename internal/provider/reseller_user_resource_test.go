@@ -30,24 +30,7 @@ func testAccResellerUser(t *testing.T) string {
 // test.
 func testAccCheckResellerUserDestroy(t *testing.T, username string) resource.TestCheckFunc {
 	return func(_ *terraform.State) error {
-		client := NewClient(ClientConfig{
-			Server:   os.Getenv("MXROUTE_SERVER"),
-			Username: os.Getenv("MXROUTE_USERNAME"),
-			APIKey:   os.Getenv("MXROUTE_API_KEY"),
-		})
-
-		var api ResellerUser
-
-		err := client.Do(t.Context(), "GET", "/reseller/users/"+username, nil, &api)
-		if err == nil {
-			return fmt.Errorf("reseller user %q still exists after destroy", username)
-		}
-
-		if !IsNotFound(err) {
-			return fmt.Errorf("checking reseller user destroy: %w", err)
-		}
-
-		return nil
+		return checkGoneSingle[ResellerUser](t, "/reseller/users/"+username, fmt.Sprintf("reseller user %q", username))
 	}
 }
 

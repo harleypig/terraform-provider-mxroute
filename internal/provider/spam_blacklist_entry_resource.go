@@ -2,15 +2,10 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -55,47 +50,17 @@ func (r *SpamBlacklistEntryResource) Schema(ctx context.Context, req resource.Sc
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a single entry in a mail domain's spam blacklist on the MXroute account. An entry is a sender address or domain whose mail is always rejected. MXroute exposes no in-place update for a blacklist entry, so changing any attribute replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The parent domain the blacklist entry belongs to (e.g. `example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"entry": schema.StringAttribute{
-				MarkdownDescription: "The blacklist entry — a sender address or domain to reject (e.g. `spammer@example.net`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — `<domain>/<entry>`.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"domain": requiredReplaceString("The parent domain the blacklist entry belongs to (e.g. `example.com`)."),
+			"entry":  requiredReplaceString("The blacklist entry — a sender address or domain to reject (e.g. `spammer@example.net`)."),
+			"id":     computedIDAttribute("Resource identifier — `<domain>/<entry>`."),
 		},
 	}
 }
 
 func (r *SpamBlacklistEntryResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if client := configureResourceClient(req, resp); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
 }
 
 func (r *SpamBlacklistEntryResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -187,19 +152,7 @@ func (r *SpamBlacklistEntryResource) Delete(ctx context.Context, req resource.De
 }
 
 func (r *SpamBlacklistEntryResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	domain, entry, found := strings.Cut(req.ID, "/")
-	if !found || domain == "" || entry == "" {
-		resp.Diagnostics.AddError(
-			"Unexpected Import Identifier",
-			fmt.Sprintf("Expected import identifier of the form \"domain/entry\", got: %q", req.ID),
-		)
-
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("domain"), domain)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("entry"), entry)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	importTwoPart(ctx, req, resp, "entry")
 }
 
 // entryExists lists the domain's spam blacklist and reports whether entry is
@@ -211,23 +164,9 @@ func (r *SpamBlacklistEntryResource) ImportState(ctx context.Context, req resour
 // like the spam whitelist. Verify against the live account (see the
 // acceptance-test note); if the shape differs, adjust the list type here.
 func (r *SpamBlacklistEntryResource) entryExists(ctx context.Context, domain, entry string) (bool, error) {
-	var list []string
+	found, err := fetchFromList(ctx, r.client, "/domains/"+domain+"/spam/blacklist", func(e *string) bool { return *e == entry })
 
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/spam/blacklist", nil, &list); err != nil {
-		if IsNotFound(err) {
-			return false, nil
-		}
-
-		return false, err
-	}
-
-	for _, e := range list {
-		if e == entry {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return found != nil, err
 }
 
 // spamBlacklistEntryModel builds the Terraform state model for one blacklist

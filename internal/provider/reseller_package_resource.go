@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -101,13 +100,7 @@ func (r *ResellerPackageResource) Schema(ctx context.Context, req resource.Schem
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a reseller package on the MXroute account. Requires a reseller account. Limit attributes are strings (for example `\"5\"` or `\"unlimited\"`); the configured value is the source of truth, and the computed `settings` object exposes the typed limits MXroute parsed from them. Each limit's create-time default (stated per attribute below) comes from the [MXroute API](https://api.mxroute.com/docs).",
 		Attributes: map[string]schema.Attribute{
-			"name": schema.StringAttribute{
-				MarkdownDescription: "The package name. MXroute keys a package by name and exposes no rename, so changing `name` replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"name": requiredReplaceString("The package name. MXroute keys a package by name and exposes no rename, so changing `name` replaces the resource."),
 			"quota": schema.StringAttribute{
 				MarkdownDescription: "Storage quota granted by the package, as a string (for example `\"5\"` for 5 GB, or `\"unlimited\"`). When unset, it is populated from the package's current settings; the API default for a new package is `\"1\"` (1 GB).",
 				Optional:            true,
@@ -178,33 +171,15 @@ func (r *ResellerPackageResource) Schema(ctx context.Context, req resource.Schem
 					},
 				},
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — the package name.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — the package name."),
 		},
 	}
 }
 
 func (r *ResellerPackageResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if client := configureResourceClient(req, resp); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
 }
 
 func (r *ResellerPackageResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -352,24 +327,13 @@ func (r *ResellerPackageResource) Delete(ctx context.Context, req resource.Delet
 }
 
 func (r *ResellerPackageResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), req.ID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	importSingleKey(ctx, req, resp, "name")
 }
 
 // fetchPackage GETs a reseller package, returning (nil, nil) when it does not
 // exist.
 func (r *ResellerPackageResource) fetchPackage(ctx context.Context, name string) (*Package, error) {
-	var api Package
-
-	if err := r.client.Do(ctx, http.MethodGet, "/reseller/packages/"+name, nil, &api); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return &api, nil
+	return fetchOne[Package](ctx, r.client, "/reseller/packages/"+name)
 }
 
 // resellerPackageModelFromAPI maps an API package onto the Terraform state

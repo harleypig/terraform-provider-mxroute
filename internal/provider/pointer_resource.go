@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -57,20 +54,8 @@ func (r *PointerResource) Schema(ctx context.Context, req resource.SchemaRequest
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a pointer (alias or redirect) for a mail domain on the MXroute account. MXroute exposes no in-place update for a pointer, so changing any attribute replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The parent domain the pointer belongs to (e.g. `example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"pointer": schema.StringAttribute{
-				MarkdownDescription: "The pointer name that resolves to the parent domain (e.g. `www.example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"domain":  requiredReplaceString("The parent domain the pointer belongs to (e.g. `example.com`)."),
+			"pointer": requiredReplaceString("The pointer name that resolves to the parent domain (e.g. `www.example.com`)."),
 			"alias": schema.BoolAttribute{
 				MarkdownDescription: "Whether the pointer is an alias (`true`) or a redirect (`false`). Optional; the [MXroute API](https://api.mxroute.com/docs) default is `true` (creates an alias).",
 				Optional:            true,
@@ -88,33 +73,15 @@ func (r *PointerResource) Schema(ctx context.Context, req resource.SchemaRequest
 				MarkdownDescription: "The target the pointer resolves to.",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — `<domain>/<pointer>`.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — `<domain>/<pointer>`."),
 		},
 	}
 }
 
 func (r *PointerResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if client := configureResourceClient(req, resp); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
 }
 
 func (r *PointerResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -240,41 +207,13 @@ func (r *PointerResource) Delete(ctx context.Context, req resource.DeleteRequest
 }
 
 func (r *PointerResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	domain, pointer, found := strings.Cut(req.ID, "/")
-	if !found || domain == "" || pointer == "" {
-		resp.Diagnostics.AddError(
-			"Unexpected Import Identifier",
-			fmt.Sprintf("Expected import identifier of the form \"domain/pointer\", got: %q", req.ID),
-		)
-
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("domain"), domain)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("pointer"), pointer)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	importTwoPart(ctx, req, resp, "pointer")
 }
 
 // fetchPointer lists the domain's pointers and returns the one named pointer,
 // or (nil, nil) when the domain or the pointer does not exist.
 func (r *PointerResource) fetchPointer(ctx context.Context, domain, pointer string) (*DomainPointer, error) {
-	var list []DomainPointer
-
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/pointers", nil, &list); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	for i := range list {
-		if list[i].Pointer == pointer {
-			return &list[i], nil
-		}
-	}
-
-	return nil, nil
+	return fetchFromList(ctx, r.client, "/domains/"+domain+"/pointers", func(p *DomainPointer) bool { return p.Pointer == pointer })
 }
 
 // pointerModelFromAPI maps an API pointer onto the Terraform state model. The

@@ -6,11 +6,9 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -55,13 +53,7 @@ func (r *SpamSettingsResource) Schema(ctx context.Context, req resource.SchemaRe
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a domain's spam configuration on the MXroute account. This is a per-domain singleton; there is no reset endpoint, so destroying the resource only drops it from Terraform state and leaves the domain's spam settings untouched.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The domain whose spam settings are managed (e.g. `example.com`). Changing this replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"domain": requiredReplaceString("The domain whose spam settings are managed (e.g. `example.com`). Changing this replaces the resource."),
 			"high_score": schema.Int64Attribute{
 				MarkdownDescription: "The spam score at or above which a message is auto-deleted, from 1 to 50.",
 				Required:            true,
@@ -69,33 +61,15 @@ func (r *SpamSettingsResource) Schema(ctx context.Context, req resource.SchemaRe
 					int64validator.Between(1, 50),
 				},
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — the domain name.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — the domain name."),
 		},
 	}
 }
 
 func (r *SpamSettingsResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if client := configureResourceClient(req, resp); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
 }
 
 func (r *SpamSettingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -106,33 +80,42 @@ func (r *SpamSettingsResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	state, ok := r.apply(ctx, plan, &resp.Diagnostics)
+	if !ok {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+// apply PATCHes plan's spam settings and reads them back into the returned
+// state — the shared body of Create and Update. It reports false (after adding
+// a diagnostic) when the PATCH or read-back fails.
+func (r *SpamSettingsResource) apply(ctx context.Context, plan SpamSettingsResourceModel, diags *diag.Diagnostics) (SpamSettingsResourceModel, bool) {
 	domain := plan.Domain.ValueString()
 
 	body := spamSettingsRequest{HighScore: plan.HighScore.ValueInt64()}
 
 	if err := r.client.Do(ctx, http.MethodPatch, "/domains/"+domain+"/spam/settings", body, nil); err != nil {
-		resp.Diagnostics.AddError("Error creating spam settings", err.Error())
+		diags.AddError("Error applying spam settings", err.Error())
 
-		return
+		return plan, false
 	}
 
-	// Read the settings back to confirm the applied value.
 	api, err := r.fetchSpamSettings(ctx, domain)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading spam settings after create", err.Error())
+		diags.AddError("Error reading spam settings after apply", err.Error())
 
-		return
+		return plan, false
 	}
 
 	if api == nil {
-		resp.Diagnostics.AddError("Error reading spam settings after create", fmt.Sprintf("spam settings for domain %q were not found immediately after creation", domain))
+		diags.AddError("Error reading spam settings after apply", fmt.Sprintf("spam settings for domain %q were not found after being applied", domain))
 
-		return
+		return plan, false
 	}
 
-	state := spamSettingsModelFromAPI(domain, api)
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	return spamSettingsModelFromAPI(domain, api), true
 }
 
 func (r *SpamSettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -171,30 +154,10 @@ func (r *SpamSettingsResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	domain := plan.Domain.ValueString()
-
-	body := spamSettingsRequest{HighScore: plan.HighScore.ValueInt64()}
-
-	if err := r.client.Do(ctx, http.MethodPatch, "/domains/"+domain+"/spam/settings", body, nil); err != nil {
-		resp.Diagnostics.AddError("Error updating spam settings", err.Error())
-
+	state, ok := r.apply(ctx, plan, &resp.Diagnostics)
+	if !ok {
 		return
 	}
-
-	api, err := r.fetchSpamSettings(ctx, domain)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading spam settings after update", err.Error())
-
-		return
-	}
-
-	if api == nil {
-		resp.Diagnostics.AddError("Error reading spam settings after update", fmt.Sprintf("spam settings for domain %q were not found", domain))
-
-		return
-	}
-
-	state := spamSettingsModelFromAPI(domain, api)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -207,24 +170,13 @@ func (r *SpamSettingsResource) Delete(ctx context.Context, req resource.DeleteRe
 }
 
 func (r *SpamSettingsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("domain"), req.ID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	importSingleKey(ctx, req, resp, "domain")
 }
 
 // fetchSpamSettings GETs a domain's spam settings, returning (nil, nil) when
 // they do not exist.
 func (r *SpamSettingsResource) fetchSpamSettings(ctx context.Context, domain string) (*SpamSettings, error) {
-	var api SpamSettings
-
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/spam/settings", nil, &api); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return &api, nil
+	return fetchOne[SpamSettings](ctx, r.client, "/domains/"+domain+"/spam/settings")
 }
 
 // spamSettingsModelFromAPI maps API spam settings onto the Terraform state

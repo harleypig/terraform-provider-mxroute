@@ -6,12 +6,10 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -59,13 +57,7 @@ func (r *DomainResource) Schema(ctx context.Context, req resource.SchemaRequest,
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a mail domain on the MXroute account. MXroute exposes no in-place update for a domain, so changing `domain` replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The domain name to host mail for (e.g. `example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"domain": requiredReplaceString("The domain name to host mail for (e.g. `example.com`)."),
 			"mail_hosting": schema.BoolAttribute{
 				MarkdownDescription: "Whether mail hosting is enabled for the domain. Defaults to the value MXroute assigns on creation; set it explicitly to toggle mail hosting on or off.",
 				Optional:            true,
@@ -83,33 +75,15 @@ func (r *DomainResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				ElementType:         types.StringType,
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — the domain name.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — the domain name."),
 		},
 	}
 }
 
 func (r *DomainResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if client := configureResourceClient(req, resp); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
 }
 
 func (r *DomainResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -259,23 +233,12 @@ func (r *DomainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 }
 
 func (r *DomainResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("domain"), req.ID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	importSingleKey(ctx, req, resp, "domain")
 }
 
 // fetchDomain GETs a domain, returning (nil, nil) when it does not exist.
 func (r *DomainResource) fetchDomain(ctx context.Context, domain string) (*Domain, error) {
-	var api Domain
-
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain, nil, &api); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return &api, nil
+	return fetchOne[Domain](ctx, r.client, "/domains/"+domain)
 }
 
 // domainModelFromAPI maps an API domain onto the Terraform state model.

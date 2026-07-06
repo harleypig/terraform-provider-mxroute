@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -73,20 +71,8 @@ func (r *EmailAccountResource) Schema(ctx context.Context, req resource.SchemaRe
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages an email account (mailbox) on a domain hosted at MXroute. The `domain` and `username` identify the mailbox and cannot be changed in place, so changing either replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The domain the mailbox belongs to (e.g. `example.com`). Changing this replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"username": schema.StringAttribute{
-				MarkdownDescription: "The local part of the address (the name before the `@`). Changing this replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"domain":   requiredReplaceString("The domain the mailbox belongs to (e.g. `example.com`). Changing this replaces the resource."),
+			"username": requiredReplaceString("The local part of the address (the name before the `@`). Changing this replaces the resource."),
 			"password_wo": schema.StringAttribute{
 				MarkdownDescription: "The mailbox password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. **Required when creating** a mailbox; it may be omitted for a mailbox that already exists, in which case the password is left unchanged. To rotate the password on an existing mailbox, set the new value and bump `password_wo_version`.",
 				Optional:            true,
@@ -128,33 +114,15 @@ func (r *EmailAccountResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "Whether the mailbox is suspended.",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — `domain/username`.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — `domain/username`."),
 		},
 	}
 }
 
 func (r *EmailAccountResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if client := configureResourceClient(req, resp); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
 }
 
 func (r *EmailAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -343,35 +311,13 @@ func (r *EmailAccountResource) Delete(ctx context.Context, req resource.DeleteRe
 }
 
 func (r *EmailAccountResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	domain, username, found := strings.Cut(req.ID, "/")
-	if !found || domain == "" || username == "" {
-		resp.Diagnostics.AddError(
-			"Invalid import ID",
-			fmt.Sprintf("Expected import ID in the form \"domain/username\", got: %q", req.ID),
-		)
-
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("domain"), domain)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("username"), username)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	importTwoPart(ctx, req, resp, "username")
 }
 
 // fetchEmailAccount GETs a single mailbox, returning (nil, nil) when it does
 // not exist.
 func (r *EmailAccountResource) fetchEmailAccount(ctx context.Context, domain, username string) (*EmailAccount, error) {
-	var api EmailAccount
-
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/email-accounts/"+username, nil, &api); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return &api, nil
+	return fetchOne[EmailAccount](ctx, r.client, "/domains/"+domain+"/email-accounts/"+username)
 }
 
 // emailAccountStateFromAPI builds the state model from an API mailbox. The

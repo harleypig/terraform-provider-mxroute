@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -84,30 +83,15 @@ func (d *EmailQuotaDataSource) Schema(ctx context.Context, req datasource.Schema
 					},
 				},
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier — the account username.",
-				Computed:            true,
-			},
+			"id": dataSourceIDAttribute("Data source identifier — the account username."),
 		},
 	}
 }
 
 func (d *EmailQuotaDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if client := configureDataSourceClient(req, resp); client != nil {
+		d.client = client
 	}
-
-	client, ok := req.ProviderData.(*Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	d.client = client
 }
 
 func (d *EmailQuotaDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

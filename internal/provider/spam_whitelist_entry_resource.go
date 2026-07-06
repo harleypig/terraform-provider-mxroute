@@ -2,15 +2,10 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -55,47 +50,17 @@ func (r *SpamWhitelistEntryResource) Schema(ctx context.Context, req resource.Sc
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a single entry in a domain's spam whitelist. The whitelist is a set of address patterns, so there is no in-place update: changing `domain` or `entry` replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The domain whose spam whitelist the entry belongs to (e.g. `example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"entry": schema.StringAttribute{
-				MarkdownDescription: "The whitelist entry — an address or pattern to always accept (wildcards like `*@trusted.com` are supported).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — `<domain>/<entry>`.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"domain": requiredReplaceString("The domain whose spam whitelist the entry belongs to (e.g. `example.com`)."),
+			"entry":  requiredReplaceString("The whitelist entry — an address or pattern to always accept (wildcards like `*@trusted.com` are supported)."),
+			"id":     computedIDAttribute("Resource identifier — `<domain>/<entry>`."),
 		},
 	}
 }
 
 func (r *SpamWhitelistEntryResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if client := configureResourceClient(req, resp); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
 }
 
 func (r *SpamWhitelistEntryResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -187,39 +152,13 @@ func (r *SpamWhitelistEntryResource) Delete(ctx context.Context, req resource.De
 }
 
 func (r *SpamWhitelistEntryResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	domain, entry, found := strings.Cut(req.ID, "/")
-	if !found || domain == "" || entry == "" {
-		resp.Diagnostics.AddError(
-			"Unexpected Import Identifier",
-			fmt.Sprintf("Expected import identifier in the form `<domain>/<entry>`, got: %q.", req.ID),
-		)
-
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("domain"), domain)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("entry"), entry)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	importTwoPart(ctx, req, resp, "entry")
 }
 
 // entryExists GETs the domain's spam whitelist and reports whether entry is
 // present. A missing domain (404) means the entry is gone too.
 func (r *SpamWhitelistEntryResource) entryExists(ctx context.Context, domain, entry string) (bool, error) {
-	var whitelist []string
+	found, err := fetchFromList(ctx, r.client, "/domains/"+domain+"/spam/whitelist", func(e *string) bool { return *e == entry })
 
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/spam/whitelist", nil, &whitelist); err != nil {
-		if IsNotFound(err) {
-			return false, nil
-		}
-
-		return false, err
-	}
-
-	for _, candidate := range whitelist {
-		if candidate == entry {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return found != nil, err
 }

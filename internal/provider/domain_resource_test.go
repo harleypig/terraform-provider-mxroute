@@ -29,24 +29,7 @@ func testAccTestDomain(t *testing.T) string {
 // testAccCheckDomainDestroy confirms the domain is gone after the test.
 func testAccCheckDomainDestroy(t *testing.T, domain string) resource.TestCheckFunc {
 	return func(_ *terraform.State) error {
-		client := NewClient(ClientConfig{
-			Server:   os.Getenv("MXROUTE_SERVER"),
-			Username: os.Getenv("MXROUTE_USERNAME"),
-			APIKey:   os.Getenv("MXROUTE_API_KEY"),
-		})
-
-		var api Domain
-
-		err := client.Do(t.Context(), "GET", "/domains/"+domain, nil, &api)
-		if err == nil {
-			return fmt.Errorf("domain %q still exists after destroy", domain)
-		}
-
-		if !IsNotFound(err) {
-			return fmt.Errorf("checking domain destroy: %w", err)
-		}
-
-		return nil
+		return checkGoneSingle[Domain](t, "/domains/"+domain, fmt.Sprintf("domain %q", domain))
 	}
 }
 

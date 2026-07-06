@@ -78,11 +78,6 @@
   `email_account` password change was verified live via a dev-override against
   the existing `harleypig.com` domain with a throwaway mailbox, sidestepping
   this — but the full suite needs the verified domain.)
-- [ ] Register the provider on the Terraform Registry (see
-  [RELEASING.md](RELEASING.md)): sign in, **Publish → Provider →** add
-  `harleypig/terraform-provider-mxroute`, upload the GPG public key. The
-  existing `v0.1.0` GitHub release ingests automatically once registered
-  (currently 404 on registry.terraform.io).
 
 ## Provider comparison backlog (vs demon-tf-provider-mxroute)
 
@@ -111,24 +106,21 @@ httptest seam), so demon's wins are structural/ergonomic, not a reason to swap.
 
 ### Ergonomics & DRY
 
-- [ ] Add `internal/providerutil` with `ResourceClient`/`DataSourceClient`
-  Configure helpers and convert all 20 Configure sites — collapses a duplicated
-  17-line `*Client` type-assertion block (×20, ~340 lines) to ~2 lines each,
-  ~300 lines net (a Rule-of-Three violation), with the error wording defined
-  once. Doable without the subpackage split.
-- [ ] Add a shared validators library (`DomainName` / `LocalPart` / `Email` /
-  `NumericOrUnlimited`) and apply it across every resource's domain / username /
-  email / quota attributes — ours has essentially no plan-time input validation
-  (only two bespoke `catch_all` validators), so users hit apply-time API 422s.
-- [ ] Extract the API client into its own `internal/client` package over the
-  existing `Do` — cleaner layering, isolated httptest-based testing. Optionally
-  add thin typed per-endpoint methods incrementally (demon's real structural
-  win: centralizes path construction) — gate against YAGNI for the current size.
-- [ ] Smaller DRY nits: `stringvalidator.OneOf` to replace the hand-rolled
-  `catchAllTypeValidator`; a shared `apply()` helper for Create/Update in the
-  singleton resources (`catch_all`, `spam_settings`); exponential-backoff-with-
-  cap as the no-header fallback for 429 retries (do **not** copy demon's 5xx
-  retry — it retries non-idempotent POST/PATCH).
+The DRY pass itself is done (merged); these decisions from it are kept — not
+pending work:
+
+- **Declined: a domain/email format-validator library.** demon ships
+  `DomainName` / `Email` format validators, but this provider **deliberately
+  defers FORMAT validation to the API** — verified by the spec audit's rejected
+  `email` finding (its validators are enums / ranges / presence only, never
+  `format:`). Adding format regexes would fight that convention and risk
+  rejecting valid inputs. The **enum** case is covered (OneOf, above); the
+  spec-grounded **range** validators (`password` minLength, `limit` AtMost,
+  `username` bounds) are the separate audit items under *Provider Setup*.
+- **Deferred (YAGNI): extracting the client into `internal/client`.** `client.go`
+  is already a self-contained `Client` with a thin `Do` and an httptest seam
+  (`client_test.go`); a separate package buys only export churn at this size.
+  Revisit only if typed per-endpoint methods become worthwhile.
 
 ### Data-source coverage
 

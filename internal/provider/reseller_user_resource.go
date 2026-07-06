@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -80,20 +79,8 @@ func (r *ResellerUserResource) Schema(ctx context.Context, req resource.SchemaRe
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a reseller-managed user on the MXroute account. The `username` identifies the user and the `email` cannot be changed in place, so changing either replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"username": schema.StringAttribute{
-				MarkdownDescription: "The reseller user's login name. Changing this replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"email": schema.StringAttribute{
-				MarkdownDescription: "The reseller user's contact email address. MXroute exposes no update for it, so changing this replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"username": requiredReplaceString("The reseller user's login name. Changing this replaces the resource."),
+			"email":    requiredReplaceString("The reseller user's contact email address. MXroute exposes no update for it, so changing this replaces the resource."),
 			"package": schema.StringAttribute{
 				MarkdownDescription: "The reseller package assigned to the user. Changing this reassigns the package in place.",
 				Required:            true,
@@ -135,33 +122,15 @@ func (r *ResellerUserResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "The user's storage quota limit in megabytes; null when the quota is unlimited.",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — the username.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — the username."),
 		},
 	}
 }
 
 func (r *ResellerUserResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if client := configureResourceClient(req, resp); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
 }
 
 func (r *ResellerUserResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -368,24 +337,13 @@ func (r *ResellerUserResource) Delete(ctx context.Context, req resource.DeleteRe
 }
 
 func (r *ResellerUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("username"), req.ID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	importSingleKey(ctx, req, resp, "username")
 }
 
 // fetchResellerUser GETs a single reseller user, returning (nil, nil) when it
 // does not exist.
 func (r *ResellerUserResource) fetchResellerUser(ctx context.Context, username string) (*ResellerUser, error) {
-	var api ResellerUser
-
-	if err := r.client.Do(ctx, http.MethodGet, "/reseller/users/"+username, nil, &api); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return &api, nil
+	return fetchOne[ResellerUser](ctx, r.client, "/reseller/users/"+username)
 }
 
 // resellerUserStateFromAPI builds the state model from an API reseller user.

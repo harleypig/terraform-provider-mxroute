@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -63,18 +62,12 @@ func (r *CatchAllResource) Schema(ctx context.Context, req resource.SchemaReques
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages the catch-all policy for a domain hosted at MXroute. The policy is a per-domain singleton, so this resource has no create or delete API call: it PATCHes the desired policy and resets to the `fail` default when destroyed. Changing `domain` replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The domain whose catch-all policy this manages (e.g. `example.com`). Changing this replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"domain": requiredReplaceString("The domain whose catch-all policy this manages (e.g. `example.com`). Changing this replaces the resource."),
 			"type": schema.StringAttribute{
 				MarkdownDescription: "The catch-all policy: `fail` (reject mail to unknown addresses), `blackhole` (silently discard it), or `address` (deliver it to `address`).",
 				Required:            true,
 				Validators: []validator.String{
-					catchAllTypeValidator{},
+					stringvalidator.OneOf(catchAllTypes...),
 				},
 			},
 			"address": schema.StringAttribute{
@@ -85,13 +78,7 @@ func (r *CatchAllResource) Schema(ctx context.Context, req resource.SchemaReques
 				MarkdownDescription: "Human-readable description of the catch-all policy, as reported by the API.",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — the domain name.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — the domain name."),
 		},
 	}
 }
@@ -105,21 +92,9 @@ func (r *CatchAllResource) ConfigValidators(ctx context.Context) []resource.Conf
 }
 
 func (r *CatchAllResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if client := configureResourceClient(req, resp); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
 }
 
 // Create PATCHes the desired catch-all policy — the singleton has no create
@@ -132,30 +107,41 @@ func (r *CatchAllResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	state, ok := r.apply(ctx, plan, &resp.Diagnostics)
+	if !ok {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+// apply PATCHes plan's catch-all policy — the singleton has no create verb, so
+// Create and Update both call it — then reads it back into the returned state.
+// It reports false (after adding a diagnostic) when the PATCH or read-back
+// fails.
+func (r *CatchAllResource) apply(ctx context.Context, plan CatchAllResourceModel, diags *diag.Diagnostics) (CatchAllResourceModel, bool) {
 	domain := plan.Domain.ValueString()
 
 	if err := r.client.Do(ctx, http.MethodPatch, catchAllPath(domain), catchAllRequestFromPlan(plan), nil); err != nil {
-		resp.Diagnostics.AddError("Error setting catch-all policy", err.Error())
+		diags.AddError("Error applying catch-all policy", err.Error())
 
-		return
+		return plan, false
 	}
 
 	api, err := r.fetchCatchAll(ctx, domain)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading catch-all policy after create", err.Error())
+		diags.AddError("Error reading catch-all policy after apply", err.Error())
 
-		return
+		return plan, false
 	}
 
 	if api == nil {
-		resp.Diagnostics.AddError("Error reading catch-all policy after create", fmt.Sprintf("catch-all policy for %q was not found immediately after being set", domain))
+		diags.AddError("Error reading catch-all policy after apply", fmt.Sprintf("catch-all policy for %q was not found after being applied", domain))
 
-		return
+		return plan, false
 	}
 
-	state := catchAllStateFromAPI(api, domain)
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	return catchAllStateFromAPI(api, domain), true
 }
 
 func (r *CatchAllResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -195,28 +181,10 @@ func (r *CatchAllResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	domain := plan.Domain.ValueString()
-
-	if err := r.client.Do(ctx, http.MethodPatch, catchAllPath(domain), catchAllRequestFromPlan(plan), nil); err != nil {
-		resp.Diagnostics.AddError("Error updating catch-all policy", err.Error())
-
+	state, ok := r.apply(ctx, plan, &resp.Diagnostics)
+	if !ok {
 		return
 	}
-
-	api, err := r.fetchCatchAll(ctx, domain)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading catch-all policy after update", err.Error())
-
-		return
-	}
-
-	if api == nil {
-		resp.Diagnostics.AddError("Error reading catch-all policy after update", fmt.Sprintf("catch-all policy for %q was not found after update", domain))
-
-		return
-	}
-
-	state := catchAllStateFromAPI(api, domain)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -240,24 +208,13 @@ func (r *CatchAllResource) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 func (r *CatchAllResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("domain"), req.ID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	importSingleKey(ctx, req, resp, "domain")
 }
 
 // fetchCatchAll GETs a domain's catch-all policy, returning (nil, nil) when
 // the domain (and thus its policy) does not exist.
 func (r *CatchAllResource) fetchCatchAll(ctx context.Context, domain string) (*CatchAll, error) {
-	var api CatchAll
-
-	if err := r.client.Do(ctx, http.MethodGet, catchAllPath(domain), nil, &api); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return &api, nil
+	return fetchOne[CatchAll](ctx, r.client, catchAllPath(domain))
 }
 
 // catchAllPath is the API path for a domain's catch-all policy.
@@ -293,38 +250,6 @@ func catchAllStateFromAPI(api *CatchAll, domain string) CatchAllResourceModel {
 		Description: types.StringValue(api.Description),
 		ID:          types.StringValue(domain),
 	}
-}
-
-// catchAllTypeValidator validates that the catch-all type is one of the
-// permitted policy values.
-type catchAllTypeValidator struct{}
-
-func (v catchAllTypeValidator) Description(ctx context.Context) string {
-	return fmt.Sprintf("value must be one of: %s", strings.Join(catchAllTypes, ", "))
-}
-
-func (v catchAllTypeValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v catchAllTypeValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-
-	value := req.ConfigValue.ValueString()
-
-	for _, allowed := range catchAllTypes {
-		if value == allowed {
-			return
-		}
-	}
-
-	resp.Diagnostics.AddAttributeError(
-		req.Path,
-		"Invalid catch-all type",
-		fmt.Sprintf("Expected one of %s, got: %q.", strings.Join(catchAllTypes, ", "), value),
-	)
 }
 
 // catchAllAddressValidator enforces that `address` is set exactly when `type`

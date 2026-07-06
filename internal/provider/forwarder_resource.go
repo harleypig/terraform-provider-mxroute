@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -56,20 +53,8 @@ func (r *ForwarderResource) Schema(ctx context.Context, req resource.SchemaReque
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages an email forwarder (alias) on a mail domain. MXroute exposes no in-place update for a forwarder, so changing any attribute replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The domain the forwarder belongs to (e.g. `example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"alias": schema.StringAttribute{
-				MarkdownDescription: "The local part of the forwarding address (e.g. `sales` for `sales@example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"domain": requiredReplaceString("The domain the forwarder belongs to (e.g. `example.com`)."),
+			"alias":  requiredReplaceString("The local part of the forwarding address (e.g. `sales` for `sales@example.com`)."),
 			"destinations": schema.ListAttribute{
 				MarkdownDescription: "The email addresses mail to this alias is forwarded to. MXroute exposes no in-place update, so changing the destinations replaces the resource.",
 				ElementType:         types.StringType,
@@ -82,33 +67,15 @@ func (r *ForwarderResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "The full forwarding address (e.g. `sales@example.com`).",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — `<domain>/<alias>`.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — `<domain>/<alias>`."),
 		},
 	}
 }
 
 func (r *ForwarderResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
+	if client := configureResourceClient(req, resp); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-
-		return
-	}
-
-	r.client = client
 }
 
 func (r *ForwarderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -252,41 +219,13 @@ func (r *ForwarderResource) Delete(ctx context.Context, req resource.DeleteReque
 }
 
 func (r *ForwarderResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	domain, alias, ok := strings.Cut(req.ID, "/")
-	if !ok || domain == "" || alias == "" {
-		resp.Diagnostics.AddError(
-			"Unexpected Import Identifier",
-			fmt.Sprintf("Expected import identifier in the form `<domain>/<alias>`, got: %q.", req.ID),
-		)
-
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("domain"), domain)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("alias"), alias)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), req.ID)...)
+	importTwoPart(ctx, req, resp, "alias")
 }
 
 // fetchForwarder lists a domain's forwarders and returns the one matching
 // alias, or (nil, nil) when no such forwarder exists.
 func (r *ForwarderResource) fetchForwarder(ctx context.Context, domain, alias string) (*Forwarder, error) {
-	var forwarders []Forwarder
-
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/forwarders", nil, &forwarders); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	for i := range forwarders {
-		if forwarders[i].Alias == alias {
-			return &forwarders[i], nil
-		}
-	}
-
-	return nil, nil
+	return fetchFromList(ctx, r.client, "/domains/"+domain+"/forwarders", func(f *Forwarder) bool { return f.Alias == alias })
 }
 
 // forwarderModelFromAPI maps an API forwarder onto the Terraform state model.
