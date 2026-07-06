@@ -31,7 +31,8 @@ func TestAccForwarderResource(t *testing.T) {
 					resource.TestCheckResourceAttr("mxroute_forwarder.test", "alias", alias),
 					resource.TestCheckResourceAttr("mxroute_forwarder.test", "id", domain+"/"+alias),
 					resource.TestCheckResourceAttr("mxroute_forwarder.test", "destinations.#", "1"),
-					resource.TestCheckResourceAttr("mxroute_forwarder.test", "destinations.0", "owner@example.net"),
+					// destinations is a Set — elements are hashed, not indexed.
+					resource.TestCheckTypeSetElemAttr("mxroute_forwarder.test", "destinations.*", "owner@example.net"),
 					resource.TestCheckResourceAttrSet("mxroute_forwarder.test", "email"),
 				),
 			},

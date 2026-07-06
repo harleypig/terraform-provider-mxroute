@@ -282,7 +282,7 @@ func (r *ResellerPackageResource) Update(ctx context.Context, req resource.Updat
 		DomainPointers:  rpStringPtr(plan.DomainPointers),
 	}
 
-	if err := r.client.Do(ctx, http.MethodPatch, "/reseller/packages/"+name, body, nil); err != nil {
+	if err := r.client.Do(ctx, http.MethodPatch, "/reseller/packages/"+pathSeg(name), body, nil); err != nil {
 		resp.Diagnostics.AddError("Error updating reseller package", err.Error())
 
 		return
@@ -319,7 +319,7 @@ func (r *ResellerPackageResource) Delete(ctx context.Context, req resource.Delet
 	}
 
 	// A package already gone is a successful delete.
-	if err := r.client.Do(ctx, http.MethodDelete, "/reseller/packages/"+state.Name.ValueString(), nil, nil); err != nil && !IsNotFound(err) {
+	if err := r.client.Do(ctx, http.MethodDelete, "/reseller/packages/"+pathSeg(state.Name.ValueString()), nil, nil); err != nil && !IsNotFound(err) {
 		resp.Diagnostics.AddError("Error deleting reseller package", err.Error())
 
 		return
@@ -333,7 +333,7 @@ func (r *ResellerPackageResource) ImportState(ctx context.Context, req resource.
 // fetchPackage GETs a reseller package, returning (nil, nil) when it does not
 // exist.
 func (r *ResellerPackageResource) fetchPackage(ctx context.Context, name string) (*Package, error) {
-	return fetchOne[Package](ctx, r.client, "/reseller/packages/"+name)
+	return fetchOne[Package](ctx, r.client, "/reseller/packages/"+pathSeg(name))
 }
 
 // resellerPackageModelFromAPI maps an API package onto the Terraform state

@@ -89,21 +89,6 @@ the correctness/security edge (write-only passwords, the real
 `{success,data,error}` envelope, 429-only retry, idempotent deletes, an
 httptest seam), so demon's wins are structural/ergonomic, not a reason to swap.
 
-### Correctness fixes (present in the released v0.2.0)
-
-- [ ] `url.PathEscape` the spam blacklist/whitelist entry DELETE paths — entries
-  are emails/wildcards (`*@spammer.test`) with `@`/`*`/`+` that must be
-  percent-encoded, but the path is concatenated raw → broken deletes. Audit
-  sibling resources for the same raw-path concatenation; add a regression test.
-- [ ] Fix the `catch_all` empty-string validation hole — validation keys only on
-  `IsNull()`, so `type = address` with `address = ""` slips through and PATCHes
-  an empty address (and `type = fail`/`blackhole` with `""` wrongly errors).
-  Reject `""` for `address`, ignore it otherwise; regression test.
-- [ ] Change `mxroute_forwarder.destinations` from `List` to `Set` (with
-  `setvalidator.SizeAtLeast(1)`): with `List` + `RequiresReplace`, the API
-  reordering destinations forces a destroy/recreate of a live forwarder. Also
-  affects harleydev's fan-out forwarders (`support: [a, b]`).
-
 ### Ergonomics & DRY
 
 The DRY pass itself is done (merged); these decisions from it are kept — not
@@ -151,3 +136,9 @@ pending work:
 - [ ] Whether the reseller API accepts a per-user quota PATCH — if not, ours'
   settable `mxroute_reseller_user` quota input is a misleading no-op and should
   become computed (as demon models it).
+- [ ] Whether the API requires `@`/`+` percent-encoded in path segments (e.g. a
+  spam entry or forwarder alias with `+`). `pathSeg` uses `url.PathEscape`,
+  which encodes `*` and `/ # ? space` but leaves `@`/`+` as RFC-valid pchar. If
+  a live DELETE of an entry containing `@`/`+` misses, switch `pathSeg` to a
+  stricter encoder (encode those too). Exercise with a `foo+bar@x` alias / entry
+  against the test domain.

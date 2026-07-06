@@ -144,7 +144,7 @@ func (r *SpamWhitelistEntryResource) Delete(ctx context.Context, req resource.De
 	entry := state.Entry.ValueString()
 
 	// An entry already gone is a successful delete.
-	if err := r.client.Do(ctx, http.MethodDelete, "/domains/"+domain+"/spam/whitelist/"+entry, nil, nil); err != nil && !IsNotFound(err) {
+	if err := r.client.Do(ctx, http.MethodDelete, "/domains/"+domain+"/spam/whitelist/"+pathSeg(entry), nil, nil); err != nil && !IsNotFound(err) {
 		resp.Diagnostics.AddError("Error deleting spam whitelist entry", err.Error())
 
 		return

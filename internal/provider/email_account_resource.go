@@ -267,7 +267,7 @@ func (r *EmailAccountResource) Update(ctx context.Context, req resource.UpdateRe
 		body.Limit = int64PtrFromValue(plan.Limit)
 	}
 
-	if err := r.client.Do(ctx, http.MethodPatch, "/domains/"+domain+"/email-accounts/"+username, body, nil); err != nil {
+	if err := r.client.Do(ctx, http.MethodPatch, "/domains/"+domain+"/email-accounts/"+pathSeg(username), body, nil); err != nil {
 		resp.Diagnostics.AddError("Error updating email account", err.Error())
 
 		return
@@ -300,7 +300,7 @@ func (r *EmailAccountResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	endpoint := "/domains/" + state.Domain.ValueString() + "/email-accounts/" + state.Username.ValueString()
+	endpoint := "/domains/" + state.Domain.ValueString() + "/email-accounts/" + pathSeg(state.Username.ValueString())
 
 	// A mailbox already gone is a successful delete.
 	if err := r.client.Do(ctx, http.MethodDelete, endpoint, nil, nil); err != nil && !IsNotFound(err) {
@@ -317,7 +317,7 @@ func (r *EmailAccountResource) ImportState(ctx context.Context, req resource.Imp
 // fetchEmailAccount GETs a single mailbox, returning (nil, nil) when it does
 // not exist.
 func (r *EmailAccountResource) fetchEmailAccount(ctx context.Context, domain, username string) (*EmailAccount, error) {
-	return fetchOne[EmailAccount](ctx, r.client, "/domains/"+domain+"/email-accounts/"+username)
+	return fetchOne[EmailAccount](ctx, r.client, "/domains/"+domain+"/email-accounts/"+pathSeg(username))
 }
 
 // emailAccountStateFromAPI builds the state model from an API mailbox. The

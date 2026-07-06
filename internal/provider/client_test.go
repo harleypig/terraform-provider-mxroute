@@ -328,3 +328,25 @@ func TestRateLimitWait(t *testing.T) {
 		})
 	}
 }
+
+func TestPathSeg(t *testing.T) {
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{"plain", "plain"},
+		{"a/b", "a%2Fb"},                       // a slash would otherwise become a path segment
+		{"a b", "a%20b"},                       // spaces must be encoded
+		{"a#b", "a%23b"},                       // fragment delimiter
+		{"a?b", "a%3Fb"},                       // query delimiter
+		{"*@spammer.test", "%2A@spammer.test"}, // wildcard "*" encoded; "@" left as valid pchar
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			if got := pathSeg(tt.in); got != tt.want {
+				t.Errorf("pathSeg(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
