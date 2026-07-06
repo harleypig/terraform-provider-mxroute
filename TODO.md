@@ -75,20 +75,6 @@ pending work:
 
 ### CI & governance
 
-- [x] Resolve the CI credential gap — done: documented in .github/workflows/test.yml
-  that live acceptance is intentionally NOT CI-run (personal-account secrets +
-  a verified test domain are out of scope); the acceptance job runs the
-  credential-free plan-time validation tests, and credential-free unit coverage
-  (client, validators) runs in the build job's `go test`.
-- [x] Fix the stale `.github/CODEOWNERS` and add `CONTRIBUTING.md` +
-  `SECURITY.md` — done: CODEOWNERS is now `* @harleypig`, and CONTRIBUTING/
-  SECURITY live under `.github/` (build/test/generate/PR workflow; private
-  vuln reporting via GitHub security advisories).
-- [x] Ensure **every** resource and data source has a registry example — done:
-  added `data-source.tf` for `mxroute_quota`, `mxroute_email_quota`, and
-  `mxroute_verification_key` and regenerated docs. All 10 resources and 15 data
-  sources now have an example; audit the `examples/` tree on every future
-  addition (tfplugindocs renders Example Usage/Import only from it).
 - [ ] Flesh out the provider **Overview** on the registry.terraform.io landing
   page. It renders `docs/index.md`, generated from `templates/index.md.tmpl`
   (plus the provider schema) — currently only a two-sentence blurb before
