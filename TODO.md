@@ -76,9 +76,10 @@ httptest seam), so demon's wins are structural/ergonomic, not a reason to swap.
 ### Ergonomics & DRY
 
 - [ ] Add `internal/providerutil` with `ResourceClient`/`DataSourceClient`
-  Configure helpers and convert all ~19 Configure sites — removes ~300 lines of
-  duplicated `*Client` type-assertion boilerplate (a Rule-of-Three violation),
-  with the error wording defined once. Doable without the subpackage split.
+  Configure helpers and convert all 20 Configure sites — collapses a duplicated
+  17-line `*Client` type-assertion block (×20, ~340 lines) to ~2 lines each,
+  ~300 lines net (a Rule-of-Three violation), with the error wording defined
+  once. Doable without the subpackage split.
 - [ ] Add a shared validators library (`DomainName` / `LocalPart` / `Email` /
   `NumericOrUnlimited`) and apply it across every resource's domain / username /
   email / quota attributes — ours has essentially no plan-time input validation
