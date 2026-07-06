@@ -26,6 +26,20 @@
 
 ## Repo Setup
 
+- [ ] Set up a verified throwaway test domain (e.g. `throwaway.harleypig.dev`)
+  on the MXroute account so the acceptance tests can run — they manage a
+  `mxroute_domain` resource, and MXroute rejects adding any new domain (HTTP
+  422 `Domain verification required`) until a DNS TXT ownership record proves
+  it, so a fresh throwaway can't be stood up in-test. Steps: add the subdomain
+  in the MXroute panel/API, publish the required TXT record (its DNS lives in
+  Linode via harleydev's `domains/` config), complete verification, then set
+  `MXROUTE_TEST_DOMAIN` to it — locally (for `make testacc`) and as a CI secret
+  (the `Acceptance Tests` job currently **skips** because it's unset). The
+  `testAccTestDomain` guard forbids `harleypig.com`, so a dedicated throwaway is
+  the only way to exercise the domain-managing acceptance tests. (The
+  `email_account` password change was verified live via a dev-override against
+  the existing `harleypig.com` domain with a throwaway mailbox, sidestepping
+  this — but the full suite needs the verified domain.)
 - [ ] Register the provider on the Terraform Registry (see
   [RELEASING.md](RELEASING.md)): sign in, **Publish → Provider →** add
   `harleypig/terraform-provider-mxroute`, upload the GPG public key. The
