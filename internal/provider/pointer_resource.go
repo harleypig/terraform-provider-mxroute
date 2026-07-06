@@ -199,7 +199,7 @@ func (r *PointerResource) Delete(ctx context.Context, req resource.DeleteRequest
 	pointer := state.Pointer.ValueString()
 
 	// A pointer already gone is a successful delete.
-	if err := r.client.Do(ctx, http.MethodDelete, "/domains/"+domain+"/pointers/"+pointer, nil, nil); err != nil && !IsNotFound(err) {
+	if err := r.client.Do(ctx, http.MethodDelete, "/domains/"+domain+"/pointers/"+pathSeg(pointer), nil, nil); err != nil && !IsNotFound(err) {
 		resp.Diagnostics.AddError("Error deleting pointer", err.Error())
 
 		return

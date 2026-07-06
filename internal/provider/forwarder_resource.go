@@ -216,7 +216,7 @@ func (r *ForwarderResource) Delete(ctx context.Context, req resource.DeleteReque
 	alias := state.Alias.ValueString()
 
 	// A forwarder already gone is a successful delete.
-	if err := r.client.Do(ctx, http.MethodDelete, "/domains/"+domain+"/forwarders/"+alias, nil, nil); err != nil && !IsNotFound(err) {
+	if err := r.client.Do(ctx, http.MethodDelete, "/domains/"+domain+"/forwarders/"+pathSeg(alias), nil, nil); err != nil && !IsNotFound(err) {
 		resp.Diagnostics.AddError("Error deleting forwarder", err.Error())
 
 		return

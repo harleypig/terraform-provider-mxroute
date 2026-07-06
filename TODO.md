@@ -91,18 +91,20 @@ httptest seam), so demon's wins are structural/ergonomic, not a reason to swap.
 
 ### Correctness fixes (present in the released v0.2.0)
 
-- [ ] `url.PathEscape` the spam blacklist/whitelist entry DELETE paths — entries
-  are emails/wildcards (`*@spammer.test`) with `@`/`*`/`+` that must be
-  percent-encoded, but the path is concatenated raw → broken deletes. Audit
-  sibling resources for the same raw-path concatenation; add a regression test.
-- [ ] Fix the `catch_all` empty-string validation hole — validation keys only on
-  `IsNull()`, so `type = address` with `address = ""` slips through and PATCHes
-  an empty address (and `type = fail`/`blackhole` with `""` wrongly errors).
-  Reject `""` for `address`, ignore it otherwise; regression test.
-- [ ] Change `mxroute_forwarder.destinations` from `List` to `Set` (with
-  `setvalidator.SizeAtLeast(1)`): with `List` + `RequiresReplace`, the API
-  reordering destinations forces a destroy/recreate of a live forwarder. Also
-  affects harleydev's fan-out forwarders (`support: [a, b]`).
+- [x] `url.PathEscape` the spam blacklist/whitelist entry DELETE paths — done
+  via a shared `pathSeg` helper applied to every user-controlled leaf segment
+  (spam entry, forwarder alias, pointer, mailbox username, reseller name /
+  username); `domain` is left raw (validated DNS hostname). `TestPathSeg`
+  regression test. Note: `url.PathEscape` encodes `*` and the dangerous
+  `/ # ? space` but leaves `@`/`+` (RFC pchar) — see the live-API item below.
+- [x] Fix the `catch_all` empty-string validation hole — done:
+  `catchAllAddressSet` counts null/unknown/**empty-string** as unset, so
+  `type = address` with `""` is rejected and `type = fail`/`blackhole` with
+  `""` no longer wrongly errors. Unit test covers all four cases.
+- [x] Change `mxroute_forwarder.destinations` from `List` to `Set` (with
+  `setvalidator.SizeAtLeast(1)`) — done; stops the API's destination reordering
+  from forcing a destroy/recreate. Breaking schema change (alpha v0). harleydev's
+  fan-out forwarders are handled separately in that repo.
 
 ### Ergonomics & DRY
 
@@ -151,3 +153,9 @@ pending work:
 - [ ] Whether the reseller API accepts a per-user quota PATCH — if not, ours'
   settable `mxroute_reseller_user` quota input is a misleading no-op and should
   become computed (as demon models it).
+- [ ] Whether the API requires `@`/`+` percent-encoded in path segments (e.g. a
+  spam entry or forwarder alias with `+`). `pathSeg` uses `url.PathEscape`,
+  which encodes `*` and `/ # ? space` but leaves `@`/`+` as RFC-valid pchar. If
+  a live DELETE of an entry containing `@`/`+` misses, switch `pathSeg` to a
+  stricter encoder (encode those too). Exercise with a `foo+bar@x` alias / entry
+  against the test domain.

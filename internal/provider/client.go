@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -158,6 +159,23 @@ type envelopeError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 	Field   string `json:"field"`
+}
+
+// pathSeg percent-encodes a user-supplied value for safe inclusion as a single
+// URL path segment (RFC 3986). Identifiers such as a spam-list entry
+// (`*@spammer.test`), a forwarder alias, or a mailbox local-part can contain
+// characters — notably `/`, `#`, `?`, and spaces — that break a raw
+// concatenated path (a `/` in an entry silently becomes an extra path segment,
+// so the DELETE misses and the entry is never removed). Callers wrap each
+// user-controlled leaf segment with this; the fixed, validated `domain`
+// segment is left as-is (it is a DNS hostname with no such characters).
+//
+// Note: url.PathEscape encodes the wildcard `*` (to `%2A`) but leaves some
+// RFC-valid pchar such as `@` and `+` unescaped, as a compliant server accepts
+// them. If the MXroute API is found to require those percent-encoded too,
+// switch to a stricter encoder — see the TODO.
+func pathSeg(s string) string {
+	return url.PathEscape(s)
 }
 
 // Do executes an authenticated request against path (for example

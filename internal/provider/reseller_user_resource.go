@@ -169,7 +169,7 @@ func (r *ResellerUserResource) Create(ctx context.Context, req resource.CreateRe
 	if !plan.Quota.IsNull() && !plan.Quota.IsUnknown() {
 		quota := plan.Quota.ValueString()
 
-		if err := r.client.Do(ctx, http.MethodPatch, "/reseller/users/"+username, updateResellerUserRequest{Quota: &quota}, nil); err != nil {
+		if err := r.client.Do(ctx, http.MethodPatch, "/reseller/users/"+pathSeg(username), updateResellerUserRequest{Quota: &quota}, nil); err != nil {
 			resp.Diagnostics.AddError("Error setting reseller user quota", err.Error())
 
 			return
@@ -178,7 +178,7 @@ func (r *ResellerUserResource) Create(ctx context.Context, req resource.CreateRe
 
 	// Suspend when the plan explicitly asks for it.
 	if !plan.Suspended.IsNull() && !plan.Suspended.IsUnknown() && plan.Suspended.ValueBool() {
-		if err := r.client.Do(ctx, http.MethodPost, "/reseller/users/"+username+"/suspend", nil, nil); err != nil {
+		if err := r.client.Do(ctx, http.MethodPost, "/reseller/users/"+pathSeg(username)+"/suspend", nil, nil); err != nil {
 			resp.Diagnostics.AddError("Error suspending reseller user", err.Error())
 
 			return
@@ -246,7 +246,7 @@ func (r *ResellerUserResource) Update(ctx context.Context, req resource.UpdateRe
 	if !plan.Package.Equal(state.Package) {
 		body := resellerUserPackageRequest{Package: plan.Package.ValueString()}
 
-		if err := r.client.Do(ctx, http.MethodPatch, "/reseller/users/"+username+"/package", body, nil); err != nil {
+		if err := r.client.Do(ctx, http.MethodPatch, "/reseller/users/"+pathSeg(username)+"/package", body, nil); err != nil {
 			resp.Diagnostics.AddError("Error updating reseller user package", err.Error())
 
 			return
@@ -279,7 +279,7 @@ func (r *ResellerUserResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	if body.Password != nil || body.Quota != nil {
-		if err := r.client.Do(ctx, http.MethodPatch, "/reseller/users/"+username, body, nil); err != nil {
+		if err := r.client.Do(ctx, http.MethodPatch, "/reseller/users/"+pathSeg(username), body, nil); err != nil {
 			resp.Diagnostics.AddError("Error updating reseller user", err.Error())
 
 			return
@@ -294,7 +294,7 @@ func (r *ResellerUserResource) Update(ctx context.Context, req resource.UpdateRe
 			action = "suspend"
 		}
 
-		if err := r.client.Do(ctx, http.MethodPost, "/reseller/users/"+username+"/"+action, nil, nil); err != nil {
+		if err := r.client.Do(ctx, http.MethodPost, "/reseller/users/"+pathSeg(username)+"/"+action, nil, nil); err != nil {
 			resp.Diagnostics.AddError("Error updating reseller user suspension", err.Error())
 
 			return
@@ -329,7 +329,7 @@ func (r *ResellerUserResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 
 	// A user already gone is a successful delete.
-	if err := r.client.Do(ctx, http.MethodDelete, "/reseller/users/"+state.Username.ValueString(), nil, nil); err != nil && !IsNotFound(err) {
+	if err := r.client.Do(ctx, http.MethodDelete, "/reseller/users/"+pathSeg(state.Username.ValueString()), nil, nil); err != nil && !IsNotFound(err) {
 		resp.Diagnostics.AddError("Error deleting reseller user", err.Error())
 
 		return
@@ -343,7 +343,7 @@ func (r *ResellerUserResource) ImportState(ctx context.Context, req resource.Imp
 // fetchResellerUser GETs a single reseller user, returning (nil, nil) when it
 // does not exist.
 func (r *ResellerUserResource) fetchResellerUser(ctx context.Context, username string) (*ResellerUser, error) {
-	return fetchOne[ResellerUser](ctx, r.client, "/reseller/users/"+username)
+	return fetchOne[ResellerUser](ctx, r.client, "/reseller/users/"+pathSeg(username))
 }
 
 // resellerUserStateFromAPI builds the state model from an API reseller user.
