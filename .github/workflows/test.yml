@@ -92,6 +92,14 @@ jobs:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
       - run: go mod download
+      # Acceptance tests run with TF_ACC=1 but no MXROUTE credentials or test
+      # domain: live-account acceptance is intentionally NOT run in CI (it would
+      # need secrets for a personal account and a verified throwaway test
+      # domain — see the repo TODO). What runs here credential-free is the
+      # plan-time validation coverage (ExpectError tests that fire before any
+      # API call); every test that touches the live account skips via PreCheck /
+      # testAccTestDomain. Credential-free unit coverage (client, validators)
+      # runs in the build job's `go test`.
       - env:
           TF_ACC: "1"
         run: go test -v -cover ./internal/provider/
