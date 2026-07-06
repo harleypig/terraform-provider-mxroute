@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -66,7 +66,7 @@ func (r *CatchAllResource) Schema(ctx context.Context, req resource.SchemaReques
 				MarkdownDescription: "The catch-all policy: `fail` (reject mail to unknown addresses), `blackhole` (silently discard it), or `address` (deliver it to `address`).",
 				Required:            true,
 				Validators: []validator.String{
-					catchAllTypeValidator{},
+					stringvalidator.OneOf(catchAllTypes...),
 				},
 			},
 			"address": schema.StringAttribute{
@@ -256,38 +256,6 @@ func catchAllStateFromAPI(api *CatchAll, domain string) CatchAllResourceModel {
 		Description: types.StringValue(api.Description),
 		ID:          types.StringValue(domain),
 	}
-}
-
-// catchAllTypeValidator validates that the catch-all type is one of the
-// permitted policy values.
-type catchAllTypeValidator struct{}
-
-func (v catchAllTypeValidator) Description(ctx context.Context) string {
-	return fmt.Sprintf("value must be one of: %s", strings.Join(catchAllTypes, ", "))
-}
-
-func (v catchAllTypeValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v catchAllTypeValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-
-	value := req.ConfigValue.ValueString()
-
-	for _, allowed := range catchAllTypes {
-		if value == allowed {
-			return
-		}
-	}
-
-	resp.Diagnostics.AddAttributeError(
-		req.Path,
-		"Invalid catch-all type",
-		fmt.Sprintf("Expected one of %s, got: %q.", strings.Join(catchAllTypes, ", "), value),
-	)
 }
 
 // catchAllAddressValidator enforces that `address` is set exactly when `type`
