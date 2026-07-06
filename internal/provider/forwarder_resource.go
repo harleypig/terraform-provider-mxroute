@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -34,7 +36,7 @@ type ForwarderResource struct {
 type ForwarderResourceModel struct {
 	Domain       types.String `tfsdk:"domain"`
 	Alias        types.String `tfsdk:"alias"`
-	Destinations types.List   `tfsdk:"destinations"`
+	Destinations types.Set    `tfsdk:"destinations"`
 	Email        types.String `tfsdk:"email"`
 	ID           types.String `tfsdk:"id"`
 }
@@ -55,12 +57,15 @@ func (r *ForwarderResource) Schema(ctx context.Context, req resource.SchemaReque
 		Attributes: map[string]schema.Attribute{
 			"domain": requiredReplaceString("The domain the forwarder belongs to (e.g. `example.com`)."),
 			"alias":  requiredReplaceString("The local part of the forwarding address (e.g. `sales` for `sales@example.com`)."),
-			"destinations": schema.ListAttribute{
+			"destinations": schema.SetAttribute{
 				MarkdownDescription: "The email addresses mail to this alias is forwarded to. MXroute exposes no in-place update, so changing the destinations replaces the resource.",
 				ElementType:         types.StringType,
 				Required:            true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.RequiresReplace(),
 				},
 			},
 			"email": schema.StringAttribute{
@@ -230,7 +235,7 @@ func (r *ForwarderResource) fetchForwarder(ctx context.Context, domain, alias st
 
 // forwarderModelFromAPI maps an API forwarder onto the Terraform state model.
 func forwarderModelFromAPI(ctx context.Context, domain string, api *Forwarder) (ForwarderResourceModel, diag.Diagnostics) {
-	destinations, diags := types.ListValueFrom(ctx, types.StringType, api.Destinations)
+	destinations, diags := types.SetValueFrom(ctx, types.StringType, api.Destinations)
 
 	return ForwarderResourceModel{
 		Domain:       types.StringValue(domain),

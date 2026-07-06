@@ -26,7 +26,7 @@ resource "mxroute_forwarder" "example" {
 ### Required
 
 - `alias` (String) The local part of the forwarding address (e.g. `sales` for `sales@example.com`).
-- `destinations` (List of String) The email addresses mail to this alias is forwarded to. MXroute exposes no in-place update, so changing the destinations replaces the resource.
+- `destinations` (Set of String) The email addresses mail to this alias is forwarded to. MXroute exposes no in-place update, so changing the destinations replaces the resource.
 - `domain` (String) The domain the forwarder belongs to (e.g. `example.com`).
 
 ### Read-Only
