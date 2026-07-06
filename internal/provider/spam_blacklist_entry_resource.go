@@ -152,7 +152,7 @@ func (r *SpamBlacklistEntryResource) Delete(ctx context.Context, req resource.De
 }
 
 func (r *SpamBlacklistEntryResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	importTwoPart(ctx, req, resp, "domain", "entry")
+	importTwoPart(ctx, req, resp, "entry")
 }
 
 // entryExists lists the domain's spam blacklist and reports whether entry is

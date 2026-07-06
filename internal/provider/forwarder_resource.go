@@ -219,7 +219,7 @@ func (r *ForwarderResource) Delete(ctx context.Context, req resource.DeleteReque
 }
 
 func (r *ForwarderResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	importTwoPart(ctx, req, resp, "domain", "alias")
+	importTwoPart(ctx, req, resp, "alias")
 }
 
 // fetchForwarder lists a domain's forwarders and returns the one matching

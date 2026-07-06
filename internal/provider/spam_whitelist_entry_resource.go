@@ -152,7 +152,7 @@ func (r *SpamWhitelistEntryResource) Delete(ctx context.Context, req resource.De
 }
 
 func (r *SpamWhitelistEntryResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	importTwoPart(ctx, req, resp, "domain", "entry")
+	importTwoPart(ctx, req, resp, "entry")
 }
 
 // entryExists GETs the domain's spam whitelist and reports whether entry is

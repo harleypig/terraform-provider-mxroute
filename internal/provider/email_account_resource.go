@@ -311,7 +311,7 @@ func (r *EmailAccountResource) Delete(ctx context.Context, req resource.DeleteRe
 }
 
 func (r *EmailAccountResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	importTwoPart(ctx, req, resp, "domain", "username")
+	importTwoPart(ctx, req, resp, "username")
 }
 
 // fetchEmailAccount GETs a single mailbox, returning (nil, nil) when it does

@@ -207,7 +207,7 @@ func (r *PointerResource) Delete(ctx context.Context, req resource.DeleteRequest
 }
 
 func (r *PointerResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	importTwoPart(ctx, req, resp, "domain", "pointer")
+	importTwoPart(ctx, req, resp, "pointer")
 }
 
 // fetchPointer lists the domain's pointers and returns the one named pointer,
