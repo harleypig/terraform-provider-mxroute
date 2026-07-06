@@ -28,6 +28,31 @@ An MIT-licensed Terraform provider for MXroute email hosting, built on
 - Provider config takes the three values (env fallback to the `MXROUTE_*`
   vars); the API key attribute is `Sensitive`.
 
+### Tracking the API spec
+
+The official OpenAPI 3 document is served (unauthenticated) at
+`https://api.mxroute.com/openapi.yaml` — the same doc `…/docs` renders; there
+is **no** `openapi.json` (it 404s). A committed snapshot lives at
+[`api/openapi.yaml`](../api/openapi.yaml), the source of truth `API-MAPPING.md`
+and the provider schemas are built against.
+
+**Check the snapshot against the official spec** at the start of API-facing
+work (auditing schemas, adding/refining a resource, an `info.version` bump
+rumor) by **diffing the two files** — never by comparing `info.version`
+strings. Upstream can change a path, request body, or `required` array without
+bumping the version, so a matching version number does not prove the specs
+agree; only a byte-level diff does:
+
+```sh
+curl -sS https://api.mxroute.com/openapi.yaml -o /tmp/mxroute-openapi.yaml
+diff -u api/openapi.yaml /tmp/mxroute-openapi.yaml
+```
+
+No output → in sync. Any diff → the API changed: update the affected
+resources/schemas and `API-MAPPING.md`, then replace `api/openapi.yaml` with
+the fetched copy and commit it **in the same change** as the code it drives.
+See [`api/README.md`](../api/README.md).
+
 ## Resource conventions
 
 Follow the `terraform-provider-patterns` skill:
@@ -85,8 +110,10 @@ MAJOR**. This keeps the registry-required semver contract while making a tag
 legibly signal which API generation it targets.
 
 The API declares its own version in its OpenAPI `info.version`
-(currently **`1.0.0`** → API major **1**; verify at
-`https://api.mxroute.com/openapi.json`, field `info.version`).
+(currently **`1.0.0`** → API major **1**; read it from the committed
+`api/openapi.yaml`, or the live `https://api.mxroute.com/openapi.yaml`, field
+`info.version` — but detect *spec change* by diffing, not by this string; see
+*Tracking the API spec* above).
 
 - **MAJOR = API major.** A release targeting API `1.x` carries major `1`. When
   MXroute ships a **breaking** API `2.0.0`, the provider's next release is
