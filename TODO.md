@@ -73,15 +73,6 @@ pending work:
   (`client_test.go`); a separate package buys only export churn at this size.
   Revisit only if typed per-endpoint methods become worthwhile.
 
-### Data-source coverage
-
-- [ ] Add the six data sources demon has and we lack, modeled on the existing
-  `email_accounts_data_source` (typed struct + `ListValueFrom`, keep our `id`
-  convention), each with a docs page + example — all are thin read-only wrappers
-  over reads the client already performs: singular `mxroute_reseller_package`
-  and `mxroute_reseller_user`; and list `mxroute_pointers`, `mxroute_forwarders`,
-  `mxroute_spam_blacklist`, `mxroute_spam_whitelist`.
-
 ### CI & governance
 
 - [ ] Resolve the CI credential gap: decide and document whether to wire
@@ -102,6 +93,15 @@ pending work:
   resources are covered, but three data sources lack an example `mxroute_quota`,
   `mxroute_email_quota`, `mxroute_verification_key` -- add a `data-source.tf`
   for each and regenerate docs.
+- [ ] Flesh out the provider **Overview** on the registry.terraform.io landing
+  page. It renders `docs/index.md`, generated from `templates/index.md.tmpl`
+  (plus the provider schema) — currently only a two-sentence blurb before
+  Requirements/Example Usage. Expand the template's prose into a proper
+  overview: what the provider manages (the resource/data-source catalog by
+  area — domains, mailboxes, forwarders/pointers, catch-all, spam, reseller),
+  the auth model (three headers with `MXROUTE_*` env-var fallback), the
+  write-only password handling, and links to the MXroute API/docs. Then
+  regenerate `docs/index.md` (`make generate`) and confirm it via CI `generate`.
 
 ### Live-API investigations (via acceptance tests)
 
