@@ -73,15 +73,6 @@ pending work:
   (`client_test.go`); a separate package buys only export churn at this size.
   Revisit only if typed per-endpoint methods become worthwhile.
 
-### Data-source coverage
-
-- [x] Add the six data sources demon has and we lack — done: singular
-  `mxroute_reseller_package` / `mxroute_reseller_user`, and list
-  `mxroute_forwarders` / `mxroute_pointers` / `mxroute_spam_blacklist` /
-  `mxroute_spam_whitelist`, each with an example, generated docs, and an
-  acceptance test (the domain-scoped ones skip without the test domain; the
-  reseller singular ones require reseller access).
-
 ### CI & governance
 
 - [ ] Resolve the CI credential gap: decide and document whether to wire
