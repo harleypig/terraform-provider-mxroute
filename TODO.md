@@ -3,19 +3,6 @@
 Open, actionable work only. Decisions already made live in
 [`adr/`](adr/README.md), not here.
 
-## Registry docs
-
-- [ ] Flesh out the provider **Overview** on the registry.terraform.io
-  landing page. It renders `docs/index.md`, generated from
-  `templates/index.md.tmpl` (plus the provider schema) — currently only a
-  two-sentence blurb before Requirements/Example Usage. Expand the template's
-  prose into a proper overview: what the provider manages (the
-  resource/data-source catalog by area — domains, mailboxes,
-  forwarders/pointers, catch-all, spam, reseller), the auth model (three
-  headers with `MXROUTE_*` env-var fallback), the write-only password
-  handling, and links to the MXroute API/docs. Then regenerate `docs/index.md`
-  (`make generate`) and confirm it via CI `generate`.
-
 ## Live review (blocked on a verified test domain)
 
 Every item here needs live-account verification, which needs a **verified
