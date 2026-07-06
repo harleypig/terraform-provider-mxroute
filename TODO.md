@@ -75,24 +75,20 @@ pending work:
 
 ### CI & governance
 
-- [ ] Resolve the CI credential gap: decide and document whether to wire
-  `MXROUTE_SERVER/USERNAME/APIKEY` as repo secrets for the acceptance job (it
-  currently sets `TF_ACC=1` with none, so the live path never runs) or that
-  live acceptance is intentionally not CI-run; add a credential-free client
-  unit-test job. (Ties into the throwaway-test-domain item above.)
-- [ ] Fix the stale `.github/CODEOWNERS` (still the scaffold's
-  `* @hashicorp/terraform-core-plugins`) and add `CONTRIBUTING.md` +
-  `SECURITY.md` (near-verbatim from demon, swapping URLs).
-- [ ] Ensure **every** resource and data source has a registry example so its
-  "Example Usage" (and, for importable resources, "Import") section renders on
-  the registry.terraform.io page. tfplugindocs emits those sections only from
-  `examples/resources/<name>/resource.tf`,
-  `examples/data-sources/<name>/data-source.tf`, and
-  `examples/resources/<name>/import.sh`. Audit the full resource/data-source set
-  against the `examples/` tree on every addition. Current gap (2026-07-06): all
-  resources are covered, but three data sources lack an example `mxroute_quota`,
-  `mxroute_email_quota`, `mxroute_verification_key` -- add a `data-source.tf`
-  for each and regenerate docs.
+- [x] Resolve the CI credential gap — done: documented in .github/workflows/test.yml
+  that live acceptance is intentionally NOT CI-run (personal-account secrets +
+  a verified test domain are out of scope); the acceptance job runs the
+  credential-free plan-time validation tests, and credential-free unit coverage
+  (client, validators) runs in the build job's `go test`.
+- [x] Fix the stale `.github/CODEOWNERS` and add `CONTRIBUTING.md` +
+  `SECURITY.md` — done: CODEOWNERS is now `* @harleypig`, and CONTRIBUTING/
+  SECURITY live under `.github/` (build/test/generate/PR workflow; private
+  vuln reporting via GitHub security advisories).
+- [x] Ensure **every** resource and data source has a registry example — done:
+  added `data-source.tf` for `mxroute_quota`, `mxroute_email_quota`, and
+  `mxroute_verification_key` and regenerated docs. All 10 resources and 15 data
+  sources now have an example; audit the `examples/` tree on every future
+  addition (tfplugindocs renders Example Usage/Import only from it).
 - [ ] Flesh out the provider **Overview** on the registry.terraform.io landing
   page. It renders `docs/index.md`, generated from `templates/index.md.tmpl`
   (plus the provider schema) — currently only a two-sentence blurb before
