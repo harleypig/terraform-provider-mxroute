@@ -5,9 +5,31 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
+
+func TestCatchAllAddressSet(t *testing.T) {
+	tests := []struct {
+		name string
+		addr types.String
+		want bool
+	}{
+		{"null is unset", types.StringNull(), false},
+		{"unknown is unset", types.StringUnknown(), false},
+		{"empty string is unset", types.StringValue(""), false},
+		{"non-empty is set", types.StringValue("harleypig@harleypig.com"), true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := catchAllAddressSet(tt.addr); got != tt.want {
+				t.Errorf("catchAllAddressSet(%v) = %v, want %v", tt.addr, got, tt.want)
+			}
+		})
+	}
+}
 
 // testAccCheckCatchAllDestroy confirms the catch-all policy is back at its
 // "fail" default after the test — or that the parent domain is gone, which

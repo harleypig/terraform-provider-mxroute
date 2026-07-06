@@ -252,6 +252,15 @@ func catchAllStateFromAPI(api *CatchAll, domain string) CatchAllResourceModel {
 	}
 }
 
+// catchAllAddressSet reports whether the `address` attribute is meaningfully
+// set. A null, unknown, OR empty-string value all count as unset — so
+// `type = "address"` with `address = ""` is correctly rejected as missing, and
+// `type = "fail"`/`"blackhole"` with `address = ""` is not wrongly flagged as
+// an unexpected address.
+func catchAllAddressSet(addr types.String) bool {
+	return !addr.IsNull() && !addr.IsUnknown() && addr.ValueString() != ""
+}
+
 // catchAllAddressValidator enforces that `address` is set exactly when `type`
 // is "address" — required for that type, and forbidden for any other.
 type catchAllAddressValidator struct{}
@@ -278,7 +287,7 @@ func (v catchAllAddressValidator) ValidateResource(ctx context.Context, req reso
 	}
 
 	isAddressType := data.Type.ValueString() == "address"
-	hasAddress := !data.Address.IsNull()
+	hasAddress := catchAllAddressSet(data.Address)
 
 	if isAddressType && !hasAddress {
 		resp.Diagnostics.AddAttributeError(
