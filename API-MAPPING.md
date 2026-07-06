@@ -38,6 +38,12 @@ per-resource docs under `docs/`.
 | `mxroute_verification_key` | `GET /verification-key` |
 | `mxroute_reseller_packages` | `GET /reseller/packages` (all package names) |
 | `mxroute_reseller_users` | `GET /reseller/users` (all usernames) |
+| `mxroute_reseller_package` | `GET /reseller/packages/{name}` (one package) |
+| `mxroute_reseller_user` | `GET /reseller/users/{username}` (one user) |
+| `mxroute_forwarders` | `GET /domains/{domain}/forwarders` (a domain's forwarders) |
+| `mxroute_pointers` | `GET /domains/{domain}/pointers` (a domain's pointers) |
+| `mxroute_spam_blacklist` | `GET /domains/{domain}/spam/blacklist` (a domain's blacklist) |
+| `mxroute_spam_whitelist` | `GET /domains/{domain}/spam/whitelist` (a domain's whitelist) |
 
 The **plural** data sources (`mxroute_domains`, `mxroute_email_accounts`,
 `mxroute_reseller_packages`, `mxroute_reseller_users`) list every object; the

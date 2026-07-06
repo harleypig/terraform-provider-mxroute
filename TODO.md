@@ -75,12 +75,12 @@ pending work:
 
 ### Data-source coverage
 
-- [ ] Add the six data sources demon has and we lack, modeled on the existing
-  `email_accounts_data_source` (typed struct + `ListValueFrom`, keep our `id`
-  convention), each with a docs page + example — all are thin read-only wrappers
-  over reads the client already performs: singular `mxroute_reseller_package`
-  and `mxroute_reseller_user`; and list `mxroute_pointers`, `mxroute_forwarders`,
-  `mxroute_spam_blacklist`, `mxroute_spam_whitelist`.
+- [x] Add the six data sources demon has and we lack — done: singular
+  `mxroute_reseller_package` / `mxroute_reseller_user`, and list
+  `mxroute_forwarders` / `mxroute_pointers` / `mxroute_spam_blacklist` /
+  `mxroute_spam_whitelist`, each with an example, generated docs, and an
+  acceptance test (the domain-scoped ones skip without the test domain; the
+  reseller singular ones require reseller access).
 
 ### CI & governance
 

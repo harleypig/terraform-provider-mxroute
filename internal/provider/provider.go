@@ -135,6 +135,12 @@ func (p *MxrouteProvider) DataSources(ctx context.Context) []func() datasource.D
 		NewVerificationKeyDataSource,
 		NewResellerPackagesDataSource,
 		NewResellerUsersDataSource,
+		NewResellerPackageDataSource,
+		NewResellerUserDataSource,
+		NewForwardersDataSource,
+		NewPointersDataSource,
+		NewSpamBlacklistDataSource,
+		NewSpamWhitelistDataSource,
 	}
 }
 
