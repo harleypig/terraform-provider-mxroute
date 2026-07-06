@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -86,9 +88,12 @@ func (r *ResellerUserResource) Schema(ctx context.Context, req resource.SchemaRe
 				Required:            true,
 			},
 			"password_wo": schema.StringAttribute{
-				MarkdownDescription: "The user's password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. Bump `password_wo_version` to change it on an existing user.",
-				Required:            true,
+				MarkdownDescription: "The user's password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. **Required when creating** a reseller user; it may be omitted for a user that already exists, in which case the password is left unchanged. To rotate it, set the new value and bump `password_wo_version`.",
+				Optional:            true,
 				WriteOnly:           true,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(8),
+				},
 			},
 			"password_wo_version": schema.Int64Attribute{
 				MarkdownDescription: "Version trigger for `password_wo`. Because a write-only value cannot be diffed, increment this whenever `password_wo` changes so the new password is sent on update.",
@@ -147,6 +152,19 @@ func (r *ResellerUserResource) Create(ctx context.Context, req resource.CreateRe
 
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("password_wo"), &password)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// password_wo is optional in the schema so an existing user need not carry
+	// it, but the API requires a password to create one — enforce that here
+	// with a clear error instead of a raw API rejection.
+	if password.IsNull() || password.ValueString() == "" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("password_wo"),
+			"Missing password for new reseller user",
+			"password_wo is required when creating a reseller user. It may be omitted only for a user that already exists.",
+		)
+
 		return
 	}
 
@@ -264,6 +282,18 @@ func (r *ResellerUserResource) Update(ctx context.Context, req resource.UpdateRe
 
 		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("password_wo"), &password)...)
 		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		// Now that password_wo is optional, a version bump with no password
+		// would otherwise send an empty password — reject it.
+		if password.IsNull() || password.ValueString() == "" {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("password_wo"),
+				"Missing password for rotation",
+				"password_wo_version changed but password_wo is not set. Provide the new password when bumping the version to rotate it.",
+			)
+
 			return
 		}
 

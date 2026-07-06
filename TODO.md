@@ -14,46 +14,12 @@
   create and flips to `true` asynchronously once AutoSSL issues the cert
   (inferred from DirectAdmin, not the MXroute API). Verify the actual timing
   and whether a post-create refresh is needed.
-- [ ] **Spec-audit refinements (audit done 2026-07-06).** Diffed every
-  resource/data source against `api/openapi.yaml` (19 units, each finding
-  adversarially verified): 17 units clean, **6 confirmed refinements** on two
-  resources. The `email_account password_wo` fix that seeded this is the
-  model. Method: per write body, compared the spec's `required:` arrays (POST
-  vs PATCH) and `default`/`maximum`/`minLength` bounds against each Go schema
-  and request struct. Endpoint coverage is already complete (26 paths / 43
-  ops, all implemented — verified 2026-07-06); this is about attribute
-  *refinements*, not missing endpoints. Fix items, most severe first:
-  - [ ] **medium — `mxroute_email_account` `limit` not create-settable.** The
-    schema marks `limit` Optional+Computed, but `createEmailAccountRequest`
-    (email_account_resource.go:54-58) omits it and `Create()` (lines 193-197)
-    never sends it — only PATCH does, so a `limit` set at create is silently
-    dropped. Add a `Limit *int64` field (json tag `limit,omitempty`) to the
-    create struct and set `Limit: int64PtrFromValue(plan.Limit)` in
-    `Create()`, mirroring `quota`; the read-back already sets `Limit`. Spec:
-    POST body `limit` default/maximum 9600 (openapi.yaml:690-694).
-  - [ ] **medium — `mxroute_reseller_user` `password_wo` wrongly `Required`.**
-    PATCH doesn't require a password, so mirror the email_account fix in FULL:
-    flip line 103-104 from `Required: true` to `Optional: true` (keep
-    `WriteOnly`); add the create-time null/empty guard in `Create()` (per
-    email_account_resource.go:180-188) **and** the rotation guard in
-    `Update()`'s `PasswordWOVersion`-change block (per :280-288) so a version
-    bump can't PATCH an empty password; update the MarkdownDescription to
-    "required only on create." Add create-without-password and
-    update-with-omitted regression tests. Spec: POST
-    `required:[username,email,password,package]`, PATCH has no `required:`
-    (openapi.yaml:1187, 1238-1245). (Acceptance-testing needs a reseller
-    account — the fix is spec-provable regardless.)
-  - [ ] **low — `mxroute_email_account` `limit` upper-bound validator.** Add
-    `int64validator.AtMost(9600)` to the `limit` attribute
-    (email_account_resource.go:107-114) so an out-of-range value fails at plan
-    time. Spec: POST `limit` `maximum: 9600` (openapi.yaml:694).
-  - [ ] **low — `password_wo` missing `minLength(8)` validator (both
-    resources).** Add `stringvalidator.LengthAtLeast(8)` to `password_wo` on
-    `mxroute_email_account` (email_account_resource.go:90-94) and
-    `mxroute_reseller_user` (reseller_user_resource.go:101-105); leave the
-    upper/lower/number complexity rule to the API (exact regex unpublished).
-    Spec: `password` `minLength: 8` on both bodies (openapi.yaml:685/741,
-    1198/1245).
+- [ ] **Spec-audit refinements — 1 of 6 remaining.** A spec audit (2026-07-06)
+  against `api/openapi.yaml` confirmed 6 attribute refinements on two resources
+  (17 of 19 units were clean). Five are fixed and merged — email_account
+  `limit`-on-create plus `limit`/`password_wo` plan validators, and
+  reseller_user `password_wo` Optional with create/rotation guards and a
+  `minLength` validator. The last is deferred pending live confirmation:
   - [ ] **low — `mxroute_reseller_user` `username` bounds (needs live-API
     confirmation).** Add `stringvalidator.LengthBetween(1, 10)` +
     `RegexMatches(^[a-z0-9_]+$)` (reseller_user_resource.go:83-89). Deferred:
@@ -126,8 +92,16 @@ pending work:
 - [ ] Fix the stale `.github/CODEOWNERS` (still the scaffold's
   `* @hashicorp/terraform-core-plugins`) and add `CONTRIBUTING.md` +
   `SECURITY.md` (near-verbatim from demon, swapping URLs).
-- [ ] Add Example Usage / `examples/` for the data sources that lack them
-  (`mxroute_quota`, `mxroute_verification_key`, `mxroute_email_quota`).
+- [ ] Ensure **every** resource and data source has a registry example so its
+  "Example Usage" (and, for importable resources, "Import") section renders on
+  the registry.terraform.io page. tfplugindocs emits those sections only from
+  `examples/resources/<name>/resource.tf`,
+  `examples/data-sources/<name>/data-source.tf`, and
+  `examples/resources/<name>/import.sh`. Audit the full resource/data-source set
+  against the `examples/` tree on every addition. Current gap (2026-07-06): all
+  resources are covered, but three data sources lack an example `mxroute_quota`,
+  `mxroute_email_quota`, `mxroute_verification_key` -- add a `data-source.tf`
+  for each and regenerate docs.
 
 ### Live-API investigations (via acceptance tests)
 

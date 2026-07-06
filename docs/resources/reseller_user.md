@@ -36,15 +36,15 @@ resource "mxroute_reseller_user" "example" {
 
 ### Required
 
-> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
-
 - `email` (String) The reseller user's contact email address. MXroute exposes no update for it, so changing this replaces the resource.
 - `package` (String) The reseller package assigned to the user. Changing this reassigns the package in place.
-- `password_wo` (String, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The user's password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. Bump `password_wo_version` to change it on an existing user.
 - `username` (String) The reseller user's login name. Changing this replaces the resource.
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
+- `password_wo` (String, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The user's password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. **Required when creating** a reseller user; it may be omitted for a user that already exists, in which case the password is left unchanged. To rotate it, set the new value and bump `password_wo_version`.
 - `password_wo_version` (Number) Version trigger for `password_wo`. Because a write-only value cannot be diffed, increment this whenever `password_wo` changes so the new password is sent on update.
 - `quota` (String) The user's storage quota, either a size in megabytes (e.g. `500MB`) or `unlimited`. When set, it is applied via a follow-up update.
 - `suspended` (Boolean) Whether the user is suspended. Set it explicitly to suspend or unsuspend the user; computed from the server when not set.

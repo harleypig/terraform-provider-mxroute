@@ -35,7 +35,9 @@ func TestAccEmailAccountResource(t *testing.T) {
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "username", testAccEmailAccountUsername),
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "id", domain+"/"+testAccEmailAccountUsername),
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "email", testAccEmailAccountUsername+"@"+domain),
-					resource.TestCheckResourceAttrSet("mxroute_email_account.test", "limit"),
+					// limit set at create must round-trip — before the create body
+					// carried `limit`, this produced a provider-inconsistent result.
+					resource.TestCheckResourceAttr("mxroute_email_account.test", "limit", "5000"),
 					// The write-only password is never stored in state.
 					resource.TestCheckNoResourceAttr("mxroute_email_account.test", "password_wo"),
 				),
@@ -80,6 +82,46 @@ func TestAccEmailAccountResource_createRequiresPassword(t *testing.T) {
 	})
 }
 
+// TestAccEmailAccountResource_limitValidator asserts the plan-time upper bound
+// on limit (spec maximum 9600). No PreCheck and no live account: the validator
+// fires during plan, before any API call.
+func TestAccEmailAccountResource_limitValidator(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "mxroute_email_account" "test" {
+  domain      = "example.com"
+  username    = "tfacctest"
+  password_wo = "s3cret-p4ss"
+  limit       = 99999
+}`,
+				ExpectError: regexp.MustCompile("at most 9600"),
+			},
+		},
+	})
+}
+
+// TestAccEmailAccountResource_passwordLengthValidator asserts the plan-time
+// minimum password length (spec minLength 8). Fires during plan.
+func TestAccEmailAccountResource_passwordLengthValidator(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "mxroute_email_account" "test" {
+  domain      = "example.com"
+  username    = "tfacctest"
+  password_wo = "short"
+}`,
+				ExpectError: regexp.MustCompile("at least 8"),
+			},
+		},
+	})
+}
+
 func testAccEmailAccountResourceConfig(domain, username, password string, passwordVersion int) string {
 	return fmt.Sprintf(`
 resource "mxroute_domain" "test" {
@@ -91,6 +133,7 @@ resource "mxroute_email_account" "test" {
   username            = %[2]q
   password_wo         = %[3]q
   password_wo_version = %[4]d
+  limit               = 5000
 }
 `, domain, username, password, passwordVersion)
 }
