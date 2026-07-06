@@ -3,6 +3,7 @@ package provider
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -58,11 +59,40 @@ func TestAccEmailAccountResource(t *testing.T) {
 				),
 			},
 			{
+				// An existing mailbox updates with password_wo omitted (the
+				// password is left unchanged): quota changes, the version
+				// trigger is unchanged, so no password is required.
+				Config: testAccEmailAccountResourceConfigNoPassword(domain, testAccEmailAccountUsername, 2048, 1),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("mxroute_email_account.test", "quota", "2048"),
+					resource.TestCheckNoResourceAttr("mxroute_email_account.test", "password_wo"),
+				),
+			},
+			{
 				ResourceName:            "mxroute_email_account.test",
 				ImportState:             true,
 				ImportStateId:           domain + "/" + testAccEmailAccountUsername,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"password_wo", "password_wo_version"},
+			},
+		},
+	})
+}
+
+// TestAccEmailAccountResource_createRequiresPassword verifies that creating a
+// mailbox without password_wo fails with a clear error — password_wo is
+// optional in the schema (so an existing mailbox need not carry it) but the
+// API requires a password to create one.
+func TestAccEmailAccountResource_createRequiresPassword(t *testing.T) {
+	domain := testAccTestDomain(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccEmailAccountResourceConfigCreateNoPassword(domain, testAccEmailAccountUsername),
+				ExpectError: regexp.MustCompile("Missing password for new mailbox"),
 			},
 		},
 	})
@@ -81,4 +111,37 @@ resource "mxroute_email_account" "test" {
   password_wo_version = %[4]d
 }
 `, domain, username, password, passwordVersion)
+}
+
+// testAccEmailAccountResourceConfigNoPassword configures an existing mailbox
+// with password_wo omitted (left unchanged) — the version trigger is held
+// steady so no rotation is attempted.
+func testAccEmailAccountResourceConfigNoPassword(domain, username string, quota, passwordVersion int) string {
+	return fmt.Sprintf(`
+resource "mxroute_domain" "test" {
+  domain = %[1]q
+}
+
+resource "mxroute_email_account" "test" {
+  domain              = mxroute_domain.test.domain
+  username            = %[2]q
+  quota               = %[3]d
+  password_wo_version = %[4]d
+}
+`, domain, username, quota, passwordVersion)
+}
+
+// testAccEmailAccountResourceConfigCreateNoPassword configures a brand-new
+// mailbox with no password_wo at all — used to assert create fails.
+func testAccEmailAccountResourceConfigCreateNoPassword(domain, username string) string {
+	return fmt.Sprintf(`
+resource "mxroute_domain" "test" {
+  domain = %[1]q
+}
+
+resource "mxroute_email_account" "test" {
+  domain   = mxroute_domain.test.domain
+  username = %[2]q
+}
+`, domain, username)
 }

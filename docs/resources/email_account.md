@@ -35,15 +35,15 @@ resource "mxroute_email_account" "example" {
 
 ### Required
 
-> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
-
 - `domain` (String) The domain the mailbox belongs to (e.g. `example.com`). Changing this replaces the resource.
-- `password_wo` (String, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The mailbox password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. Bump `password_wo_version` to change it on an existing mailbox.
 - `username` (String) The local part of the address (the name before the `@`). Changing this replaces the resource.
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `limit` (Number) Daily outbound send limit. Optional; when unset, the mailbox is created with the [MXroute API](https://api.mxroute.com/docs) default of `9600` and the applied value is read back from the server.
+- `password_wo` (String, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The mailbox password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. **Required when creating** a mailbox; it may be omitted for a mailbox that already exists, in which case the password is left unchanged. To rotate the password on an existing mailbox, set the new value and bump `password_wo_version`.
 - `password_wo_version` (Number) Version trigger for `password_wo`. Because a write-only value cannot be diffed, increment this whenever `password_wo` changes so the new password is sent on update.
 - `quota` (Number) Mailbox storage quota in megabytes (`0` = unlimited). Optional; when unset, the mailbox is created with the [MXroute API](https://api.mxroute.com/docs) default of `1024` and the applied value is read back from the server.
 
