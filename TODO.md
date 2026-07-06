@@ -78,11 +78,6 @@
   `email_account` password change was verified live via a dev-override against
   the existing `harleypig.com` domain with a throwaway mailbox, sidestepping
   this — but the full suite needs the verified domain.)
-- [x] Register the provider on the Terraform Registry (see
-  [RELEASING.md](RELEASING.md)) — **done, confirmed live** 2026-07-06:
-  `registry.terraform.io/v1/providers/harleypig/mxroute` returns HTTP 200 (no
-  longer 404). The `harleypig/terraform-provider-mxroute` provider is published
-  with the GPG public key uploaded, so tagged releases ingest automatically.
 
 ## Provider comparison backlog (vs demon-tf-provider-mxroute)
 
@@ -111,25 +106,8 @@ httptest seam), so demon's wins are structural/ergonomic, not a reason to swap.
 
 ### Ergonomics & DRY
 
-Done as one full DRY pass (in-package helpers, no subpackage split), each a
-separately-reviewable commit:
-
-- [x] Shared Configure client helpers (`configureResourceClient` /
-  `configureDataSourceClient`) — 19 sites collapsed from ~13 lines to 3, error
-  wording defined once.
-- [x] Smaller DRY nits: `stringvalidator.OneOf` replaces the hand-rolled
-  `catchAllTypeValidator`; a per-resource `apply()` shares Create/Update in
-  `catch_all` and `spam_settings`; **exponential-backoff-with-cap** for
-  no-header 429 retries (pure `rateLimitWait` + unit test; demon's 5xx retry
-  deliberately **not** copied — it retries non-idempotent POST/PATCH).
-- [x] Newly-found wins from a fresh cross-file DRY scan: `fetchOne[T]` /
-  `fetchFromList[T]` generics (10 sites, dedup the NOT_FOUND handling);
-  `computedIDAttribute` / `dataSourceIDAttribute` / `requiredReplaceString`
-  schema helpers (35 sites); `importSingleKey` / `importTwoPart` (10 sites,
-  also unifying three drifted error phrasings); and `newAccTestClient` +
-  `checkGoneSingle[T]` / `checkGoneInList[T]` acceptance-test helpers.
-
-Decisions (kept — not pending work):
+The DRY pass itself is done (merged); these decisions from it are kept — not
+pending work:
 
 - **Declined: a domain/email format-validator library.** demon ships
   `DomainName` / `Email` format validators, but this provider **deliberately
