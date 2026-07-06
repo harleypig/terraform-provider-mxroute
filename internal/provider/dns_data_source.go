@@ -181,10 +181,7 @@ func (d *DNSDataSource) Schema(ctx context.Context, req datasource.SchemaRequest
 					},
 				},
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier — the domain name.",
-				Computed:            true,
-			},
+			"id": dataSourceIDAttribute("Data source identifier — the domain name."),
 		},
 	}
 }

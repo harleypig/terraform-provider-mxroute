@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -73,20 +72,8 @@ func (r *EmailAccountResource) Schema(ctx context.Context, req resource.SchemaRe
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages an email account (mailbox) on a domain hosted at MXroute. The `domain` and `username` identify the mailbox and cannot be changed in place, so changing either replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The domain the mailbox belongs to (e.g. `example.com`). Changing this replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"username": schema.StringAttribute{
-				MarkdownDescription: "The local part of the address (the name before the `@`). Changing this replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"domain":   requiredReplaceString("The domain the mailbox belongs to (e.g. `example.com`). Changing this replaces the resource."),
+			"username": requiredReplaceString("The local part of the address (the name before the `@`). Changing this replaces the resource."),
 			"password_wo": schema.StringAttribute{
 				MarkdownDescription: "The mailbox password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. **Required when creating** a mailbox; it may be omitted for a mailbox that already exists, in which case the password is left unchanged. To rotate the password on an existing mailbox, set the new value and bump `password_wo_version`.",
 				Optional:            true,
@@ -128,13 +115,7 @@ func (r *EmailAccountResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "Whether the mailbox is suspended.",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — `domain/username`.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — `domain/username`."),
 		},
 	}
 }

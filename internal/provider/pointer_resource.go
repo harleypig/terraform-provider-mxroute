@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -57,20 +56,8 @@ func (r *PointerResource) Schema(ctx context.Context, req resource.SchemaRequest
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a pointer (alias or redirect) for a mail domain on the MXroute account. MXroute exposes no in-place update for a pointer, so changing any attribute replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The parent domain the pointer belongs to (e.g. `example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"pointer": schema.StringAttribute{
-				MarkdownDescription: "The pointer name that resolves to the parent domain (e.g. `www.example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"domain":  requiredReplaceString("The parent domain the pointer belongs to (e.g. `example.com`)."),
+			"pointer": requiredReplaceString("The pointer name that resolves to the parent domain (e.g. `www.example.com`)."),
 			"alias": schema.BoolAttribute{
 				MarkdownDescription: "Whether the pointer is an alias (`true`) or a redirect (`false`). Optional; the [MXroute API](https://api.mxroute.com/docs) default is `true` (creates an alias).",
 				Optional:            true,
@@ -88,13 +75,7 @@ func (r *PointerResource) Schema(ctx context.Context, req resource.SchemaRequest
 				MarkdownDescription: "The target the pointer resolves to.",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — `<domain>/<pointer>`.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — `<domain>/<pointer>`."),
 		},
 	}
 }

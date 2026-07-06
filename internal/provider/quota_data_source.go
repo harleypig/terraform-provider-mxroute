@@ -146,10 +146,7 @@ func (d *QuotaDataSource) Schema(ctx context.Context, req datasource.SchemaReque
 				MarkdownDescription: "When the quota figures were last computed.",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier — the account username.",
-				Computed:            true,
-			},
+			"id": dataSourceIDAttribute("Data source identifier — the account username."),
 		},
 	}
 }

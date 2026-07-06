@@ -59,10 +59,7 @@ func (d *DomainDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 				ElementType:         types.StringType,
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier — the domain name.",
-				Computed:            true,
-			},
+			"id": dataSourceIDAttribute("Data source identifier — the domain name."),
 		},
 	}
 }

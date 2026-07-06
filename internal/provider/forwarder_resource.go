@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -56,20 +55,8 @@ func (r *ForwarderResource) Schema(ctx context.Context, req resource.SchemaReque
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages an email forwarder (alias) on a mail domain. MXroute exposes no in-place update for a forwarder, so changing any attribute replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The domain the forwarder belongs to (e.g. `example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"alias": schema.StringAttribute{
-				MarkdownDescription: "The local part of the forwarding address (e.g. `sales` for `sales@example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"domain": requiredReplaceString("The domain the forwarder belongs to (e.g. `example.com`)."),
+			"alias":  requiredReplaceString("The local part of the forwarding address (e.g. `sales` for `sales@example.com`)."),
 			"destinations": schema.ListAttribute{
 				MarkdownDescription: "The email addresses mail to this alias is forwarded to. MXroute exposes no in-place update, so changing the destinations replaces the resource.",
 				ElementType:         types.StringType,
@@ -82,13 +69,7 @@ func (r *ForwarderResource) Schema(ctx context.Context, req resource.SchemaReque
 				MarkdownDescription: "The full forwarding address (e.g. `sales@example.com`).",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — `<domain>/<alias>`.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — `<domain>/<alias>`."),
 		},
 	}
 }

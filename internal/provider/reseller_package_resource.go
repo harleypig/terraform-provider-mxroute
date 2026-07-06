@@ -101,13 +101,7 @@ func (r *ResellerPackageResource) Schema(ctx context.Context, req resource.Schem
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a reseller package on the MXroute account. Requires a reseller account. Limit attributes are strings (for example `\"5\"` or `\"unlimited\"`); the configured value is the source of truth, and the computed `settings` object exposes the typed limits MXroute parsed from them. Each limit's create-time default (stated per attribute below) comes from the [MXroute API](https://api.mxroute.com/docs).",
 		Attributes: map[string]schema.Attribute{
-			"name": schema.StringAttribute{
-				MarkdownDescription: "The package name. MXroute keys a package by name and exposes no rename, so changing `name` replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"name": requiredReplaceString("The package name. MXroute keys a package by name and exposes no rename, so changing `name` replaces the resource."),
 			"quota": schema.StringAttribute{
 				MarkdownDescription: "Storage quota granted by the package, as a string (for example `\"5\"` for 5 GB, or `\"unlimited\"`). When unset, it is populated from the package's current settings; the API default for a new package is `\"1\"` (1 GB).",
 				Optional:            true,
@@ -178,13 +172,7 @@ func (r *ResellerPackageResource) Schema(ctx context.Context, req resource.Schem
 					},
 				},
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — the package name.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — the package name."),
 		},
 	}
 }

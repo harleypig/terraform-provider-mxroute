@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -80,20 +79,8 @@ func (r *ResellerUserResource) Schema(ctx context.Context, req resource.SchemaRe
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a reseller-managed user on the MXroute account. The `username` identifies the user and the `email` cannot be changed in place, so changing either replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"username": schema.StringAttribute{
-				MarkdownDescription: "The reseller user's login name. Changing this replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"email": schema.StringAttribute{
-				MarkdownDescription: "The reseller user's contact email address. MXroute exposes no update for it, so changing this replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"username": requiredReplaceString("The reseller user's login name. Changing this replaces the resource."),
+			"email":    requiredReplaceString("The reseller user's contact email address. MXroute exposes no update for it, so changing this replaces the resource."),
 			"package": schema.StringAttribute{
 				MarkdownDescription: "The reseller package assigned to the user. Changing this reassigns the package in place.",
 				Required:            true,
@@ -135,13 +122,7 @@ func (r *ResellerUserResource) Schema(ctx context.Context, req resource.SchemaRe
 				MarkdownDescription: "The user's storage quota limit in megabytes; null when the quota is unlimited.",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — the username.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — the username."),
 		},
 	}
 }

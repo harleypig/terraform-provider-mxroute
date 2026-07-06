@@ -9,8 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -63,13 +61,7 @@ func (r *CatchAllResource) Schema(ctx context.Context, req resource.SchemaReques
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages the catch-all policy for a domain hosted at MXroute. The policy is a per-domain singleton, so this resource has no create or delete API call: it PATCHes the desired policy and resets to the `fail` default when destroyed. Changing `domain` replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The domain whose catch-all policy this manages (e.g. `example.com`). Changing this replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"domain": requiredReplaceString("The domain whose catch-all policy this manages (e.g. `example.com`). Changing this replaces the resource."),
 			"type": schema.StringAttribute{
 				MarkdownDescription: "The catch-all policy: `fail` (reject mail to unknown addresses), `blackhole` (silently discard it), or `address` (deliver it to `address`).",
 				Required:            true,
@@ -85,13 +77,7 @@ func (r *CatchAllResource) Schema(ctx context.Context, req resource.SchemaReques
 				MarkdownDescription: "Human-readable description of the catch-all policy, as reported by the API.",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — the domain name.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — the domain name."),
 		},
 	}
 }

@@ -47,10 +47,7 @@ func (d *ResellerPackagesDataSource) Schema(ctx context.Context, req datasource.
 				ElementType:         types.StringType,
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier — a fixed value for this account-wide list.",
-				Computed:            true,
-			},
+			"id": dataSourceIDAttribute("Data source identifier — a fixed value for this account-wide list."),
 		},
 	}
 }

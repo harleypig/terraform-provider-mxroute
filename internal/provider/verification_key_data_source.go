@@ -87,10 +87,7 @@ func (d *VerificationKeyDataSource) Schema(ctx context.Context, req datasource.S
 				MarkdownDescription: "A human-readable description of the verification record.",
 				Computed:            true,
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier — the verification key.",
-				Computed:            true,
-			},
+			"id": dataSourceIDAttribute("Data source identifier — the verification key."),
 		},
 	}
 }

@@ -9,8 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -55,27 +53,9 @@ func (r *SpamWhitelistEntryResource) Schema(ctx context.Context, req resource.Sc
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a single entry in a domain's spam whitelist. The whitelist is a set of address patterns, so there is no in-place update: changing `domain` or `entry` replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The domain whose spam whitelist the entry belongs to (e.g. `example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"entry": schema.StringAttribute{
-				MarkdownDescription: "The whitelist entry — an address or pattern to always accept (wildcards like `*@trusted.com` are supported).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — `<domain>/<entry>`.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"domain": requiredReplaceString("The domain whose spam whitelist the entry belongs to (e.g. `example.com`)."),
+			"entry":  requiredReplaceString("The whitelist entry — an address or pattern to always accept (wildcards like `*@trusted.com` are supported)."),
+			"id":     computedIDAttribute("Resource identifier — `<domain>/<entry>`."),
 		},
 	}
 }

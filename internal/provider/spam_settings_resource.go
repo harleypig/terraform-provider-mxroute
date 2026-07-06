@@ -9,8 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -55,13 +53,7 @@ func (r *SpamSettingsResource) Schema(ctx context.Context, req resource.SchemaRe
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a domain's spam configuration on the MXroute account. This is a per-domain singleton; there is no reset endpoint, so destroying the resource only drops it from Terraform state and leaves the domain's spam settings untouched.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The domain whose spam settings are managed (e.g. `example.com`). Changing this replaces the resource.",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
+			"domain": requiredReplaceString("The domain whose spam settings are managed (e.g. `example.com`). Changing this replaces the resource."),
 			"high_score": schema.Int64Attribute{
 				MarkdownDescription: "The spam score at or above which a message is auto-deleted, from 1 to 50.",
 				Required:            true,
@@ -69,13 +61,7 @@ func (r *SpamSettingsResource) Schema(ctx context.Context, req resource.SchemaRe
 					int64validator.Between(1, 50),
 				},
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — the domain name.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"id": computedIDAttribute("Resource identifier — the domain name."),
 		},
 	}
 }

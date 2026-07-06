@@ -9,8 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -55,27 +53,9 @@ func (r *SpamBlacklistEntryResource) Schema(ctx context.Context, req resource.Sc
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a single entry in a mail domain's spam blacklist on the MXroute account. An entry is a sender address or domain whose mail is always rejected. MXroute exposes no in-place update for a blacklist entry, so changing any attribute replaces the resource.",
 		Attributes: map[string]schema.Attribute{
-			"domain": schema.StringAttribute{
-				MarkdownDescription: "The parent domain the blacklist entry belongs to (e.g. `example.com`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"entry": schema.StringAttribute{
-				MarkdownDescription: "The blacklist entry — a sender address or domain to reject (e.g. `spammer@example.net`).",
-				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource identifier — `<domain>/<entry>`.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
+			"domain": requiredReplaceString("The parent domain the blacklist entry belongs to (e.g. `example.com`)."),
+			"entry":  requiredReplaceString("The blacklist entry — a sender address or domain to reject (e.g. `spammer@example.net`)."),
+			"id":     computedIDAttribute("Resource identifier — `<domain>/<entry>`."),
 		},
 	}
 }

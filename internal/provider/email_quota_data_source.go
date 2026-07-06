@@ -83,10 +83,7 @@ func (d *EmailQuotaDataSource) Schema(ctx context.Context, req datasource.Schema
 					},
 				},
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier — the account username.",
-				Computed:            true,
-			},
+			"id": dataSourceIDAttribute("Data source identifier — the account username."),
 		},
 	}
 }

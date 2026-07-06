@@ -107,10 +107,7 @@ func (d *EmailAccountsDataSource) Schema(ctx context.Context, req datasource.Sch
 					},
 				},
 			},
-			"id": schema.StringAttribute{
-				MarkdownDescription: "Data source identifier — the domain name.",
-				Computed:            true,
-			},
+			"id": dataSourceIDAttribute("Data source identifier — the domain name."),
 		},
 	}
 }
