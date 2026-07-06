@@ -253,17 +253,7 @@ func (r *DomainResource) ImportState(ctx context.Context, req resource.ImportSta
 
 // fetchDomain GETs a domain, returning (nil, nil) when it does not exist.
 func (r *DomainResource) fetchDomain(ctx context.Context, domain string) (*Domain, error) {
-	var api Domain
-
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain, nil, &api); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return &api, nil
+	return fetchOne[Domain](ctx, r.client, "/domains/"+domain)
 }
 
 // domainModelFromAPI maps an API domain onto the Terraform state model.

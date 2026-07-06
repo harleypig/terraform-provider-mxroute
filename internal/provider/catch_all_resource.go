@@ -235,17 +235,7 @@ func (r *CatchAllResource) ImportState(ctx context.Context, req resource.ImportS
 // fetchCatchAll GETs a domain's catch-all policy, returning (nil, nil) when
 // the domain (and thus its policy) does not exist.
 func (r *CatchAllResource) fetchCatchAll(ctx context.Context, domain string) (*CatchAll, error) {
-	var api CatchAll
-
-	if err := r.client.Do(ctx, http.MethodGet, catchAllPath(domain), nil, &api); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return &api, nil
+	return fetchOne[CatchAll](ctx, r.client, catchAllPath(domain))
 }
 
 // catchAllPath is the API path for a domain's catch-all policy.

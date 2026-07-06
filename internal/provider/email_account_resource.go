@@ -349,17 +349,7 @@ func (r *EmailAccountResource) ImportState(ctx context.Context, req resource.Imp
 // fetchEmailAccount GETs a single mailbox, returning (nil, nil) when it does
 // not exist.
 func (r *EmailAccountResource) fetchEmailAccount(ctx context.Context, domain, username string) (*EmailAccount, error) {
-	var api EmailAccount
-
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/email-accounts/"+username, nil, &api); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return &api, nil
+	return fetchOne[EmailAccount](ctx, r.client, "/domains/"+domain+"/email-accounts/"+username)
 }
 
 // emailAccountStateFromAPI builds the state model from an API mailbox. The

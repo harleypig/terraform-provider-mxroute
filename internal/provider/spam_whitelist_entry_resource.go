@@ -193,21 +193,7 @@ func (r *SpamWhitelistEntryResource) ImportState(ctx context.Context, req resour
 // entryExists GETs the domain's spam whitelist and reports whether entry is
 // present. A missing domain (404) means the entry is gone too.
 func (r *SpamWhitelistEntryResource) entryExists(ctx context.Context, domain, entry string) (bool, error) {
-	var whitelist []string
+	found, err := fetchFromList(ctx, r.client, "/domains/"+domain+"/spam/whitelist", func(e *string) bool { return *e == entry })
 
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/spam/whitelist", nil, &whitelist); err != nil {
-		if IsNotFound(err) {
-			return false, nil
-		}
-
-		return false, err
-	}
-
-	for _, candidate := range whitelist {
-		if candidate == entry {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return found != nil, err
 }

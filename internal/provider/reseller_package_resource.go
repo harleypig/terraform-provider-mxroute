@@ -347,17 +347,7 @@ func (r *ResellerPackageResource) ImportState(ctx context.Context, req resource.
 // fetchPackage GETs a reseller package, returning (nil, nil) when it does not
 // exist.
 func (r *ResellerPackageResource) fetchPackage(ctx context.Context, name string) (*Package, error) {
-	var api Package
-
-	if err := r.client.Do(ctx, http.MethodGet, "/reseller/packages/"+name, nil, &api); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return &api, nil
+	return fetchOne[Package](ctx, r.client, "/reseller/packages/"+name)
 }
 
 // resellerPackageModelFromAPI maps an API package onto the Terraform state

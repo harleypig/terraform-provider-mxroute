@@ -199,23 +199,9 @@ func (r *SpamBlacklistEntryResource) ImportState(ctx context.Context, req resour
 // like the spam whitelist. Verify against the live account (see the
 // acceptance-test note); if the shape differs, adjust the list type here.
 func (r *SpamBlacklistEntryResource) entryExists(ctx context.Context, domain, entry string) (bool, error) {
-	var list []string
+	found, err := fetchFromList(ctx, r.client, "/domains/"+domain+"/spam/blacklist", func(e *string) bool { return *e == entry })
 
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/spam/blacklist", nil, &list); err != nil {
-		if IsNotFound(err) {
-			return false, nil
-		}
-
-		return false, err
-	}
-
-	for _, e := range list {
-		if e == entry {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return found != nil, err
 }
 
 // spamBlacklistEntryModel builds the Terraform state model for one blacklist

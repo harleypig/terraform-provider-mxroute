@@ -363,17 +363,7 @@ func (r *ResellerUserResource) ImportState(ctx context.Context, req resource.Imp
 // fetchResellerUser GETs a single reseller user, returning (nil, nil) when it
 // does not exist.
 func (r *ResellerUserResource) fetchResellerUser(ctx context.Context, username string) (*ResellerUser, error) {
-	var api ResellerUser
-
-	if err := r.client.Do(ctx, http.MethodGet, "/reseller/users/"+username, nil, &api); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return &api, nil
+	return fetchOne[ResellerUser](ctx, r.client, "/reseller/users/"+username)
 }
 
 // resellerUserStateFromAPI builds the state model from an API reseller user.

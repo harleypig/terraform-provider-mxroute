@@ -202,17 +202,7 @@ func (r *SpamSettingsResource) ImportState(ctx context.Context, req resource.Imp
 // fetchSpamSettings GETs a domain's spam settings, returning (nil, nil) when
 // they do not exist.
 func (r *SpamSettingsResource) fetchSpamSettings(ctx context.Context, domain string) (*SpamSettings, error) {
-	var api SpamSettings
-
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/spam/settings", nil, &api); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	return &api, nil
+	return fetchOne[SpamSettings](ctx, r.client, "/domains/"+domain+"/spam/settings")
 }
 
 // spamSettingsModelFromAPI maps API spam settings onto the Terraform state

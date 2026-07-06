@@ -246,23 +246,7 @@ func (r *PointerResource) ImportState(ctx context.Context, req resource.ImportSt
 // fetchPointer lists the domain's pointers and returns the one named pointer,
 // or (nil, nil) when the domain or the pointer does not exist.
 func (r *PointerResource) fetchPointer(ctx context.Context, domain, pointer string) (*DomainPointer, error) {
-	var list []DomainPointer
-
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/pointers", nil, &list); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	for i := range list {
-		if list[i].Pointer == pointer {
-			return &list[i], nil
-		}
-	}
-
-	return nil, nil
+	return fetchFromList(ctx, r.client, "/domains/"+domain+"/pointers", func(p *DomainPointer) bool { return p.Pointer == pointer })
 }
 
 // pointerModelFromAPI maps an API pointer onto the Terraform state model. The

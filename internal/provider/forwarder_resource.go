@@ -258,23 +258,7 @@ func (r *ForwarderResource) ImportState(ctx context.Context, req resource.Import
 // fetchForwarder lists a domain's forwarders and returns the one matching
 // alias, or (nil, nil) when no such forwarder exists.
 func (r *ForwarderResource) fetchForwarder(ctx context.Context, domain, alias string) (*Forwarder, error) {
-	var forwarders []Forwarder
-
-	if err := r.client.Do(ctx, http.MethodGet, "/domains/"+domain+"/forwarders", nil, &forwarders); err != nil {
-		if IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	for i := range forwarders {
-		if forwarders[i].Alias == alias {
-			return &forwarders[i], nil
-		}
-	}
-
-	return nil, nil
+	return fetchFromList(ctx, r.client, "/domains/"+domain+"/forwarders", func(f *Forwarder) bool { return f.Alias == alias })
 }
 
 // forwarderModelFromAPI maps an API forwarder onto the Terraform state model.
