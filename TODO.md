@@ -47,6 +47,17 @@ need reseller API access, which this account does not have.
 - [ ] **⟨reseller⟩** Whether the reseller API accepts a per-user quota PATCH —
   if not, our settable `mxroute_reseller_user` quota input is a misleading
   no-op and should become computed (as demon models it).
+- [ ] Full `TF_ACC` acceptance coverage across all resources and data sources
+  (CRUD + import round-trips), building on the verified-test-domain enabler
+  above. Scope it to **provider-internals the fabric can't surface** —
+  `ImportState`, write-only `password_wo` create/rotate behavior, error paths,
+  and the read-only data sources. This **complements, not duplicates**,
+  harleydev's integration tier: that suite applies the
+  mxroute-foundation-fabric modules against real ephemeral resources and so
+  exercises the provider's *applied* CRUD path (double duty — one run tests
+  both provider and fabric). See harleydev's TODO → *Account IaC* → "Full e2e /
+  integration testing for the `mxroute` stack". Shared enabler: the verified
+  throwaway test domain.
 
 ## Documentation
 
