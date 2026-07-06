@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -106,30 +107,41 @@ func (r *CatchAllResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	state, ok := r.apply(ctx, plan, &resp.Diagnostics)
+	if !ok {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+// apply PATCHes plan's catch-all policy — the singleton has no create verb, so
+// Create and Update both call it — then reads it back into the returned state.
+// It reports false (after adding a diagnostic) when the PATCH or read-back
+// fails.
+func (r *CatchAllResource) apply(ctx context.Context, plan CatchAllResourceModel, diags *diag.Diagnostics) (CatchAllResourceModel, bool) {
 	domain := plan.Domain.ValueString()
 
 	if err := r.client.Do(ctx, http.MethodPatch, catchAllPath(domain), catchAllRequestFromPlan(plan), nil); err != nil {
-		resp.Diagnostics.AddError("Error setting catch-all policy", err.Error())
+		diags.AddError("Error applying catch-all policy", err.Error())
 
-		return
+		return plan, false
 	}
 
 	api, err := r.fetchCatchAll(ctx, domain)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading catch-all policy after create", err.Error())
+		diags.AddError("Error reading catch-all policy after apply", err.Error())
 
-		return
+		return plan, false
 	}
 
 	if api == nil {
-		resp.Diagnostics.AddError("Error reading catch-all policy after create", fmt.Sprintf("catch-all policy for %q was not found immediately after being set", domain))
+		diags.AddError("Error reading catch-all policy after apply", fmt.Sprintf("catch-all policy for %q was not found after being applied", domain))
 
-		return
+		return plan, false
 	}
 
-	state := catchAllStateFromAPI(api, domain)
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	return catchAllStateFromAPI(api, domain), true
 }
 
 func (r *CatchAllResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -169,28 +181,10 @@ func (r *CatchAllResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	domain := plan.Domain.ValueString()
-
-	if err := r.client.Do(ctx, http.MethodPatch, catchAllPath(domain), catchAllRequestFromPlan(plan), nil); err != nil {
-		resp.Diagnostics.AddError("Error updating catch-all policy", err.Error())
-
+	state, ok := r.apply(ctx, plan, &resp.Diagnostics)
+	if !ok {
 		return
 	}
-
-	api, err := r.fetchCatchAll(ctx, domain)
-	if err != nil {
-		resp.Diagnostics.AddError("Error reading catch-all policy after update", err.Error())
-
-		return
-	}
-
-	if api == nil {
-		resp.Diagnostics.AddError("Error reading catch-all policy after update", fmt.Sprintf("catch-all policy for %q was not found after update", domain))
-
-		return
-	}
-
-	state := catchAllStateFromAPI(api, domain)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
