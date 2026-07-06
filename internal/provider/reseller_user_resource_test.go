@@ -3,11 +3,54 @@ package provider
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
+
+// TestAccResellerUserResource_createRequiresPassword verifies that creating a
+// reseller user without password_wo fails with a clear error — password_wo is
+// now Optional (so an existing user need not carry it) but the API requires a
+// password to create one. The create-time guard fires before any API call, so
+// this needs no live reseller account.
+func TestAccResellerUserResource_createRequiresPassword(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "mxroute_reseller_user" "test" {
+  username = "tfacct"
+  email    = "tfacct@example.com"
+  package  = "default"
+}`,
+				ExpectError: regexp.MustCompile("Missing password for new reseller user"),
+			},
+		},
+	})
+}
+
+// TestAccResellerUserResource_passwordLengthValidator asserts the plan-time
+// minimum password length (spec minLength 8).
+func TestAccResellerUserResource_passwordLengthValidator(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "mxroute_reseller_user" "test" {
+  username    = "tfacct"
+  email       = "tfacct@example.com"
+  package     = "default"
+  password_wo = "short"
+}`,
+				ExpectError: regexp.MustCompile("at least 8"),
+			},
+		},
+	})
+}
 
 // testAccResellerUser returns the throwaway reseller username acceptance tests
 // may create and destroy. Reseller management is not available on the test
