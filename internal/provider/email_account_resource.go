@@ -88,8 +88,8 @@ func (r *EmailAccountResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"password_wo": schema.StringAttribute{
-				MarkdownDescription: "The mailbox password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. Bump `password_wo_version` to change it on an existing mailbox.",
-				Required:            true,
+				MarkdownDescription: "The mailbox password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. **Required when creating** a mailbox; it may be omitted for a mailbox that already exists, in which case the password is left unchanged. To rotate the password on an existing mailbox, set the new value and bump `password_wo_version`.",
+				Optional:            true,
 				WriteOnly:           true,
 			},
 			"password_wo_version": schema.Int64Attribute{
@@ -171,6 +171,19 @@ func (r *EmailAccountResource) Create(ctx context.Context, req resource.CreateRe
 
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("password_wo"), &password)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// password_wo is optional in the schema so an existing mailbox need not
+	// carry it, but the API requires a password to create one — enforce that
+	// here with a clear error instead of a raw API rejection.
+	if password.IsNull() || password.ValueString() == "" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("password_wo"),
+			"Missing password for new mailbox",
+			"password_wo is required when creating a mailbox. It may be omitted only for a mailbox that already exists.",
+		)
+
 		return
 	}
 
@@ -259,6 +272,18 @@ func (r *EmailAccountResource) Update(ctx context.Context, req resource.UpdateRe
 
 		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("password_wo"), &password)...)
 		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		// Now that password_wo is optional, a version bump with no password
+		// would otherwise send an empty password; reject that explicitly.
+		if password.IsNull() || password.ValueString() == "" {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("password_wo"),
+				"Missing password for rotation",
+				"password_wo_version changed but password_wo is not set. Provide the new password when bumping the version to rotate it.",
+			)
+
 			return
 		}
 
