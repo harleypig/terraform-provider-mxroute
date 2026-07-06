@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"slices"
 	"testing"
+	"time"
 )
 
 // newTestClient returns a Client pointed at srv with canned credentials.
@@ -301,5 +302,29 @@ func TestErrorHelpers(t *testing.T) {
 
 	if IsConflict(nil) || IsRateLimited(nil) || IsNotFound(nil) {
 		t.Error("a nil error matched a code helper")
+	}
+}
+
+func TestRateLimitWait(t *testing.T) {
+	tests := []struct {
+		name    string
+		attempt int
+		hinted  time.Duration
+		want    time.Duration
+	}{
+		{"server hint honored", 0, 5 * time.Second, 5 * time.Second},
+		{"server hint of zero retries instantly", 2, 0, 0},
+		{"server hint capped at max", 0, 5 * time.Minute, maxRetryWait},
+		{"no hint backs off exponentially (attempt 0)", 0, -1, defaultRetryDelay},
+		{"no hint backs off exponentially (attempt 1)", 1, -1, 2 * defaultRetryDelay},
+		{"no hint backs off exponentially (attempt 2)", 2, -1, 4 * defaultRetryDelay},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := rateLimitWait(tt.attempt, tt.hinted); got != tt.want {
+				t.Errorf("rateLimitWait(%d, %v) = %v, want %v", tt.attempt, tt.hinted, got, tt.want)
+			}
+		})
 	}
 }

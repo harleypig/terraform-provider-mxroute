@@ -105,8 +105,9 @@ type APIError struct {
 	// Field names the offending input on a validation error; empty otherwise.
 	Field string
 	// RetryAfter is the delay before retrying a RATE_LIMITED request, taken
-	// from the Retry-After / X-RateLimit-Reset headers (or a default backoff
-	// when the response gives no hint). Zero for non-rate-limit errors.
+	// from the Retry-After / X-RateLimit-Reset headers, or negative when the
+	// response gives no usable hint (rateLimitWait then backs off
+	// exponentially). Zero for non-rate-limit errors.
 	RetryAfter time.Duration
 }
 
@@ -190,18 +191,32 @@ func (c *Client) Do(ctx context.Context, method, path string, body, out any) err
 			return err
 		}
 
-		wait := apiErr.RetryAfter
-		if wait > maxRetryWait {
-			wait = maxRetryWait
-		}
-
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 
-		case <-time.After(wait):
+		case <-time.After(rateLimitWait(attempt, apiErr.RetryAfter)):
 		}
 	}
+}
+
+// rateLimitWait returns how long to wait before retrying a rate-limited
+// request on the given zero-based attempt. hintedWait is the server-advertised
+// delay (>= 0) from retryAfterFromHeaders, or negative when the response gave
+// no usable hint — in which case an exponential backoff (defaultRetryDelay
+// doubling each attempt: 1s, 2s, 4s, …) is used instead of a flat delay. The
+// result is capped at maxRetryWait.
+func rateLimitWait(attempt int, hintedWait time.Duration) time.Duration {
+	wait := hintedWait
+	if wait < 0 {
+		wait = defaultRetryDelay << attempt
+	}
+
+	if wait > maxRetryWait {
+		wait = maxRetryWait
+	}
+
+	return wait
 }
 
 // doOnce performs a single request/response cycle for Do.
@@ -288,8 +303,9 @@ func (c *Client) doOnce(ctx context.Context, method, path string, bodyBytes []by
 
 // retryAfterFromHeaders derives the wait before retrying a rate-limited
 // request from the response headers, preferring Retry-After (seconds) then
-// X-RateLimit-Reset (a Unix timestamp). It returns defaultRetryDelay when the
-// response carries no usable hint.
+// X-RateLimit-Reset (a Unix timestamp). It returns a negative duration when
+// the response carries no usable hint, signaling the caller (rateLimitWait) to
+// apply its own exponential backoff.
 func retryAfterFromHeaders(h http.Header) time.Duration {
 	if ra := h.Get("Retry-After"); ra != "" {
 		if secs, err := strconv.Atoi(ra); err == nil && secs >= 0 {
@@ -307,5 +323,5 @@ func retryAfterFromHeaders(h http.Header) time.Duration {
 		}
 	}
 
-	return defaultRetryDelay
+	return -1
 }
