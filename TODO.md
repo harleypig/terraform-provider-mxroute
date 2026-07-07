@@ -3,57 +3,40 @@
 Open, actionable work only. Decisions already made live in
 [`adr/`](adr/README.md), not here.
 
-## Live review (blocked on a verified test domain)
+## Live review
 
-Every item here needs live-account verification, which needs a **verified
-throwaway test domain** — so the first item is the enabler; do it first, then
-the rest can be exercised via `make testacc`. Items marked **⟨reseller⟩** also
-need reseller API access, which this account does not have.
+Every item here needs **live-account** verification — but they split by what
+kind of live access, and only the first group is blocked on the test domain.
+**None of them block harleydev's mail migration:** the migration never
+creates or deletes a *domain* (harleypig.com is already on the account and
+verified), and its own safe, account-side applies naturally exercise the
+second group's slices.
+
+### Blocked on the verified test domain (domain-lifecycle tests)
 
 - [ ] **Set up the verified test domain — decided: `harleypig.dev`**
   (`MXROUTE_TEST_DOMAIN=harleypig.dev`; harleydev's e2e design resolved the
   throwaway question — harleypig.dev is the designated repeating-test domain,
   and MXroute's required `mail`/`webmail` subdomains are the throwaway records
-  exercised; see harleydev `e2e/mxroute.md`). This is the enabler for
-  everything below, **shared with harleydev's e2e tier** (its Phase 1). MXroute
-  rejects adding any new domain (HTTP 422 `Domain verification required`)
-  until a DNS TXT ownership record proves it, so a fresh domain can't be stood
-  up in-test. Steps: add the domain in the MXroute panel/API, publish the
-  required TXT record (its DNS lives in Linode via harleydev's `domains/`
-  config), complete verification, then set `MXROUTE_TEST_DOMAIN=harleypig.dev`
-  — locally (for `make testacc`) and as a CI secret (the `Acceptance Tests`
-  job currently **skips** because it's unset). The `testAccTestDomain` guard
-  forbids `harleypig.com`, so the verified test domain is the only way to
-  exercise the domain-managing tests. Open live question (shared with
-  harleydev Phase 1): whether a destroy → recreate of a previously-verified
-  domain re-triggers the 422 verification requirement.
-- [ ] Verify the `/quota` + `/quota/email` response enveloping (they may be
-  unwrapped) and the spam **blacklist** GET response shape (assumed `[]string`
-  like the whitelist). The demon provider decodes `/quota` **unenveloped**,
-  corroborating that read (its `/quota` endpoints were also 500ing upstream at
-  comparison time).
+  exercised; see harleydev `e2e/mxroute.md`). This is the enabler for the
+  domain-lifecycle items, **shared with harleydev's e2e tier** (its Phase 1).
+  MXroute rejects adding any new domain (HTTP 422 `Domain verification
+  required`) until a DNS TXT ownership record proves it, so a fresh domain
+  can't be stood up in-test. Steps: add the domain in the MXroute panel/API,
+  publish the required TXT record (its DNS lives in Linode via harleydev's
+  `domains/` config), complete verification, then set
+  `MXROUTE_TEST_DOMAIN=harleypig.dev` — locally (for `make testacc`) and as a
+  CI secret (the `Acceptance Tests` job currently **skips** because it's
+  unset). The `testAccTestDomain` guard forbids `harleypig.com`, so the
+  verified test domain is the only way to exercise the domain-managing tests.
+  Open live question (shared with harleydev Phase 1): whether a
+  destroy → recreate of a previously-verified domain re-triggers the 422
+  verification requirement.
 - [ ] Confirm the documented `ssl_enabled` behavior: the attribute description
   states it is `false` immediately after domain create and flips to `true`
   asynchronously once AutoSSL issues the cert (inferred from DirectAdmin, not
   the MXroute API). Verify the actual timing and whether a post-create refresh
-  is needed.
-- [ ] Whether the `email_account` CREATE body accepts `limit` (we now send
-  it): confirm a `limit` set at create round-trips rather than triggering a
-  provider-inconsistent-result error.
-- [ ] Whether the API requires `@`/`+` percent-encoded in path segments (e.g.
-  a spam entry or forwarder alias with `+`). `pathSeg` uses `url.PathEscape`,
-  which encodes `*` and `/ # ? space` but leaves `@`/`+` as RFC-valid pchar. If
-  a live DELETE of an entry containing `@`/`+` misses, switch `pathSeg` to a
-  stricter encoder (encode those too). Exercise with a `foo+bar@x` alias/entry.
-- [ ] **⟨reseller⟩** `mxroute_reseller_user` `username` bounds — the last
-  spec-audit refinement. Add `stringvalidator.LengthBetween(1, 10)` +
-  `RegexMatches(^[a-z0-9_]+$)` (`reseller_user_resource.go`). Deferred: the
-  constraint is prose-only in the spec `description` ("1-10 chars, lowercase
-  letters, numbers, underscores") with no `minLength`/`maxLength`/`pattern`
-  keyword — confirm the exact bounds live before enforcing (openapi.yaml:1191).
-- [ ] **⟨reseller⟩** Whether the reseller API accepts a per-user quota PATCH —
-  if not, our settable `mxroute_reseller_user` quota input is a misleading
-  no-op and should become computed (as demon models it).
+  is needed. Needs a **fresh domain create** to observe — test-domain only.
 - [ ] Full `TF_ACC` acceptance coverage across all resources and data sources
   (CRUD + import round-trips), building on the verified-test-domain enabler
   above. Scope it to **provider-internals the fabric can't surface** —
@@ -66,6 +49,40 @@ need reseller API access, which this account does not have.
   (Phase 2 of its e2e tier; overview in `e2e/README.md`; build-out tracked in
   harleydev's TODO → *e2e Testing*). Shared enabler: the verified test domain
   above (`MXROUTE_TEST_DOMAIN=harleypig.dev`).
+
+### Needs live account only (no test domain; migration applies exercise these)
+
+- [ ] Verify the `/quota` + `/quota/email` response enveloping (they may be
+  unwrapped) and the spam **blacklist** GET response shape (assumed `[]string`
+  like the whitelist). The demon provider decodes `/quota` **unenveloped**,
+  corroborating that read (its `/quota` endpoints were also 500ing upstream at
+  comparison time). `/quota` is read-only — probeable against the account any
+  time; the spam-entry slice gets exercised by harleydev's pre-migration spam
+  setup on harleypig.com (a wrong shape is a harmless read error).
+- [ ] Whether the `email_account` CREATE body accepts `limit` (sent
+  `omitempty` — only when set): confirm a `limit` set at create round-trips
+  rather than triggering a provider-inconsistent-result error. harleydev's
+  migration mailboxes **omit** `limit`, so they never touch this path — verify
+  whenever a `limit` is first set (safe on harleypig.com, account-side).
+- [ ] Whether the API requires `@`/`+` percent-encoded in path segments (e.g.
+  a spam entry or forwarder alias with `+`). `pathSeg` uses `url.PathEscape`,
+  which encodes `*` and `/ # ? space` but leaves `@`/`+` as RFC-valid pchar. If
+  a live DELETE of an entry containing `@`/`+` misses, switch `pathSeg` to a
+  stricter encoder (encode those too). Exercise with a `foo+bar@x` alias/entry
+  (safe on harleypig.com; migration aliases are plain names, so it's not on
+  that path).
+
+### Blocked on reseller API access (this account has none)
+
+- [ ] **⟨reseller⟩** `mxroute_reseller_user` `username` bounds — the last
+  spec-audit refinement. Add `stringvalidator.LengthBetween(1, 10)` +
+  `RegexMatches(^[a-z0-9_]+$)` (`reseller_user_resource.go`). Deferred: the
+  constraint is prose-only in the spec `description` ("1-10 chars, lowercase
+  letters, numbers, underscores") with no `minLength`/`maxLength`/`pattern`
+  keyword — confirm the exact bounds live before enforcing (openapi.yaml:1191).
+- [ ] **⟨reseller⟩** Whether the reseller API accepts a per-user quota PATCH —
+  if not, our settable `mxroute_reseller_user` quota input is a misleading
+  no-op and should become computed (as demon models it).
 
 ## Documentation
 
