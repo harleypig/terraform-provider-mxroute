@@ -10,16 +10,23 @@ throwaway test domain** — so the first item is the enabler; do it first, then
 the rest can be exercised via `make testacc`. Items marked **⟨reseller⟩** also
 need reseller API access, which this account does not have.
 
-- [ ] **Set up a verified throwaway test domain (`throwaway.harleypig.dev`)**
-  — the enabler for everything below. MXroute rejects adding any new domain
-  (HTTP 422 `Domain verification required`) until a DNS TXT ownership record
-  proves it, so a fresh throwaway can't be stood up in-test. Steps: add the
-  subdomain in the MXroute panel/API, publish the required TXT record (its DNS
-  lives in Linode via harleydev's `domains/` config), complete verification,
-  then set `MXROUTE_TEST_DOMAIN` to it — locally (for `make testacc`) and as a
-  CI secret (the `Acceptance Tests` job currently **skips** because it's
-  unset). The `testAccTestDomain` guard forbids `harleypig.com`, so a
-  dedicated throwaway is the only way to exercise the domain-managing tests.
+- [ ] **Set up the verified test domain — decided: `harleypig.dev`**
+  (`MXROUTE_TEST_DOMAIN=harleypig.dev`; harleydev's e2e design resolved the
+  throwaway question — harleypig.dev is the designated repeating-test domain,
+  and MXroute's required `mail`/`webmail` subdomains are the throwaway records
+  exercised; see harleydev `e2e/mxroute.md`). This is the enabler for
+  everything below, **shared with harleydev's e2e tier** (its Phase 1). MXroute
+  rejects adding any new domain (HTTP 422 `Domain verification required`)
+  until a DNS TXT ownership record proves it, so a fresh domain can't be stood
+  up in-test. Steps: add the domain in the MXroute panel/API, publish the
+  required TXT record (its DNS lives in Linode via harleydev's `domains/`
+  config), complete verification, then set `MXROUTE_TEST_DOMAIN=harleypig.dev`
+  — locally (for `make testacc`) and as a CI secret (the `Acceptance Tests`
+  job currently **skips** because it's unset). The `testAccTestDomain` guard
+  forbids `harleypig.com`, so the verified test domain is the only way to
+  exercise the domain-managing tests. Open live question (shared with
+  harleydev Phase 1): whether a destroy → recreate of a previously-verified
+  domain re-triggers the 422 verification requirement.
 - [ ] Verify the `/quota` + `/quota/email` response enveloping (they may be
   unwrapped) and the spam **blacklist** GET response shape (assumed `[]string`
   like the whitelist). The demon provider decodes `/quota` **unenveloped**,
@@ -52,12 +59,13 @@ need reseller API access, which this account does not have.
   above. Scope it to **provider-internals the fabric can't surface** —
   `ImportState`, write-only `password_wo` create/rotate behavior, error paths,
   and the read-only data sources. This **complements, not duplicates**,
-  harleydev's integration tier: that suite applies the
+  harleydev's e2e tier: that suite applies the
   mxroute-foundation-fabric modules against real ephemeral resources and so
   exercises the provider's *applied* CRUD path (double duty — one run tests
-  both provider and fabric). See harleydev's TODO → *Account IaC* → "Full e2e /
-  integration testing for the `mxroute` stack". Shared enabler: the verified
-  throwaway test domain.
+  both provider and fabric). **Now designed:** harleydev `e2e/mxroute.md`
+  (Phase 2 of its e2e tier; overview in `e2e/README.md`; build-out tracked in
+  harleydev's TODO → *e2e Testing*). Shared enabler: the verified test domain
+  above (`MXROUTE_TEST_DOMAIN=harleypig.dev`).
 
 ## Documentation
 
