@@ -13,6 +13,16 @@ test recipe. This file records what exists here.
    **real** MXroute resources against the **live account**. They mutate real
    state; run manually (`make testacc`), **never** in the default CI gate.
 
+A **complementary third tier lives out of repo**: harleydev's e2e suite
+(harleydev `e2e/mxroute.md`) applies the mxroute-foundation-fabric modules
+against real ephemeral resources — the provider's *applied* CRUD path through
+module composition. This repo's acceptance tests stay scoped to
+provider-internals the fabric can't surface (ImportState, write-only
+`password_wo`, error paths, data sources); the shared enabler is the verified
+test domain, `MXROUTE_TEST_DOMAIN=harleypig.dev` (see TODO → *Live review*).
+Recipe skills: `terraform-provider-patterns` (this repo's acceptance tier),
+`terraform-e2e-patterns` (the apply-mode e2e tier).
+
 ## Acceptance-test credentials & safety
 
 - Credentials come from the harleydev `bin/set_env` (the three `MXROUTE_*` env
