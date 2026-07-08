@@ -2,11 +2,31 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
+
+// TestAccSpamSettingsResource_highScoreValidator asserts the plan-time bound on
+// high_score (spec range 1–50). Fires during plan — no PreCheck, credentials,
+// or test domain, so it runs in the default CI gate.
+func TestAccSpamSettingsResource_highScoreValidator(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "mxroute_spam_settings" "test" {
+  domain     = "example.com"
+  high_score = 99
+}`,
+				ExpectError: regexp.MustCompile("between 1 and 50"),
+			},
+		},
+	})
+}
 
 // testAccCheckSpamSettingsDestroy confirms the resource is gone from state
 // after the test. Spam settings have no reset endpoint, so destroying the

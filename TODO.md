@@ -23,6 +23,15 @@
   (`e2e/mxroute.md`), which exercises the *applied* CRUD path via the
   mxroute-foundation-fabric modules. Run the suite with
   `bin/mxroute-provider-testacc` (see [TESTS.md](.claude/TESTS.md)).
+  A coverage audit filled the known gaps: catch-all's `address`↔`type`
+  config-validator error paths (incl. the empty-string address) and its `type`
+  `OneOf`, the `spam_settings.high_score` range validator (all plan-time, so
+  they run in the default CI gate), and `email_account` password **rotation**
+  (`TestAccEmailAccountResource_passwordRotation`, which creates the domain so
+  it waits on the block above). Every resource already has `ImportState` +
+  `CheckDestroy` and every in-place-updatable resource an update step. What is
+  left is depth, not breadth — richer data-source content assertions and
+  multi-attribute update permutations, added as needs arise.
 - [ ] Confirm the live assertions now baked into the suite pass on a green
   `make testacc` run (**blocked by the domain-verification item above** —
   these all create the test domain). `TestAccPointerResource` asserts the
