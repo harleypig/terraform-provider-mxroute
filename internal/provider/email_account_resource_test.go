@@ -126,6 +126,42 @@ resource "mxroute_email_account" "test" {
 	})
 }
 
+// TestAccEmailAccountResource_passwordRotation exercises the write-only
+// password rotate path: bumping password_wo_version with a new password_wo
+// sends the new password on update (a write-only value cannot be diffed, so the
+// version trigger is what drives it). The password never lands in state, so the
+// assertions are that the rotation applies cleanly, the version advances, and
+// password_wo stays absent from state.
+func TestAccEmailAccountResource_passwordRotation(t *testing.T) {
+	domain := testAccTestDomain(t)
+
+	const username = "tfaccrotate"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckEmailAccountDestroy(t, domain, username),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccEmailAccountResourceConfig(domain, username, "Tf-Acc3ss-P4ss!", 1),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("mxroute_email_account.test", "username", username),
+					resource.TestCheckResourceAttr("mxroute_email_account.test", "password_wo_version", "1"),
+					resource.TestCheckNoResourceAttr("mxroute_email_account.test", "password_wo"),
+				),
+			},
+			{
+				// Rotate: new password, version bumped 1 -> 2.
+				Config: testAccEmailAccountResourceConfig(domain, username, "N3w-R0tated-P4ss!", 2),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("mxroute_email_account.test", "password_wo_version", "2"),
+					resource.TestCheckNoResourceAttr("mxroute_email_account.test", "password_wo"),
+				),
+			},
+		},
+	})
+}
+
 func testAccEmailAccountResourceConfig(domain, username, password string, passwordVersion int) string {
 	return fmt.Sprintf(`
 resource "mxroute_domain" "test" {

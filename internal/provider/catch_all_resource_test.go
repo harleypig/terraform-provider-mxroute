@@ -3,6 +3,7 @@ package provider
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -90,6 +91,85 @@ func TestAccCatchAllResource(t *testing.T) {
 				ImportState:       true,
 				ImportStateId:     domain,
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// The catch-all config-validator tests below fire during plan (a config
+// validator), before any provider configuration or API call — so they need no
+// PreCheck, credentials, or test domain, and run in the default CI gate.
+
+// TestAccCatchAllResource_addressRequiredForAddressType asserts that
+// type = "address" without an address is rejected at plan.
+func TestAccCatchAllResource_addressRequiredForAddressType(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "mxroute_catch_all" "test" {
+  domain = "example.com"
+  type   = "address"
+}`,
+				ExpectError: regexp.MustCompile("Missing address"),
+			},
+		},
+	})
+}
+
+// TestAccCatchAllResource_emptyAddressRejected asserts that type = "address"
+// with an empty-string address is treated as unset and rejected — the guard
+// behind the empty-string-address fix.
+func TestAccCatchAllResource_emptyAddressRejected(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "mxroute_catch_all" "test" {
+  domain  = "example.com"
+  type    = "address"
+  address = ""
+}`,
+				ExpectError: regexp.MustCompile("Missing address"),
+			},
+		},
+	})
+}
+
+// TestAccCatchAllResource_addressForbiddenForOtherType asserts that an address
+// set on a non-"address" type is rejected at plan.
+func TestAccCatchAllResource_addressForbiddenForOtherType(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "mxroute_catch_all" "test" {
+  domain  = "example.com"
+  type    = "fail"
+  address = "postmaster@example.com"
+}`,
+				ExpectError: regexp.MustCompile("Unexpected address"),
+			},
+		},
+	})
+}
+
+// TestAccCatchAllResource_invalidType asserts the type OneOf validator rejects
+// a value outside {fail, blackhole, address} at plan.
+func TestAccCatchAllResource_invalidType(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "mxroute_catch_all" "test" {
+  domain = "example.com"
+  type   = "bogus"
+}`,
+				ExpectError: regexp.MustCompile("must be one of"),
 			},
 		},
 	})
