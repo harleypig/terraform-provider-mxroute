@@ -30,6 +30,21 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
+// testAccResellerPreCheck skips a reseller acceptance test unless the account
+// has reseller privileges. The reseller endpoints return HTTP 403 ("This
+// endpoint requires reseller privileges") on a non-reseller account — as the
+// harleydev test account is — so these tests opt in via MXROUTE_TEST_RESELLER.
+// Set it only when running against a reseller-capable account.
+func testAccResellerPreCheck(t *testing.T) {
+	t.Helper()
+
+	testAccPreCheck(t)
+
+	if os.Getenv("MXROUTE_TEST_RESELLER") == "" {
+		t.Skip("MXROUTE_TEST_RESELLER not set; skipping reseller acceptance test (requires a reseller account)")
+	}
+}
+
 // newAccTestClient builds a Client from the live MXroute credentials in the
 // environment — the shared constructor every acceptance-test CheckDestroy uses.
 func newAccTestClient() *Client {

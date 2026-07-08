@@ -67,6 +67,13 @@ mailbox objects.
   `RequiresReplace` = delete + create).
 - **`mxroute_domain` update** is only the `mail-status` toggle — `mail_hosting`
   is the sole mutable attribute; `domain` itself is `RequiresReplace`.
+- **`Domain.pointers` shape** — the OpenAPI spec declares `pointers` as an
+  array of strings, but the live `GET /domains/{domain}` returns it as an
+  **object keyed by pointer name** once the domain has any pointer (an empty
+  domain may return `[]`). The `Domain` model decodes both shapes tolerantly
+  into the list of pointer names (`models.go` `UnmarshalJSON`); the object's
+  keys are the names. The dedicated `GET /domains/{domain}/pointers` endpoint
+  is unaffected — it returns the spec's array of `DomainPointer` objects.
 - **`mxroute_reseller_user`** spans several endpoints: the base
   `POST`/`GET`/`PATCH`/`DELETE` plus `PATCH …/package` (change package),
   `POST …/suspend` and `POST …/unsuspend` (the `suspended` attribute).

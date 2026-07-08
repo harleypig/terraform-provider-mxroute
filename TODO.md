@@ -63,13 +63,17 @@ dependency lock file` before any API call.
 
 ### Findings from the first live testacc run (2026-07-09)
 
-- [ ] **Bug — `Domain.pointers` decode.** `GET /domains/<domain>` returns
-  `pointers` as an **object**, but the client model decodes `[]string`:
+- [x] **Bug — `Domain.pointers` decode.** `GET /domains/<domain>` returns
+  `pointers` as an **object**, but the client model decoded `[]string`:
   `json: cannot unmarshal object into Go struct field Domain.pointers of
   type []string`. The pointer CREATE succeeded and `TestAccPointersDataSource`
-  **passed** (the list endpoint's own shape is fine) — it is specifically the
+  **passed** (the list endpoint's own shape is fine) — it was specifically the
   Domain model's field. Failed `TestAccPointerResource` at the post-apply
-  refresh. Fix the model shape; note it in `API-MAPPING.md`.
+  refresh. **Fixed:** `Domain.UnmarshalJSON` now decodes both shapes (array of
+  strings, or object keyed by pointer name) to the list of names, with a unit
+  regression test and an `API-MAPPING.md` note. The exact live object shape
+  (keys = names is the assumed DirectAdmin convention) still wants a live
+  re-run of `TestAccPointerResource` to confirm the populated list is right.
 - [ ] **Spam writes 500 on a fresh domain.** All three spam writes —
   `mxroute_spam_settings`, `mxroute_spam_blacklist_entry`,
   `mxroute_spam_whitelist_entry` — failed `HTTP 500 Failed to update spam
@@ -81,19 +85,26 @@ dependency lock file` before any API call.
   ticket if it reproduces generally. Until resolved, the spam-entry DELETE
   path (and its `@`/`+` encoding question) stays unexercised — the creates
   never succeeded.
-- [ ] **Test fixture — email-account password too weak.** The API now
+- [x] **Test fixture — email-account password too weak.** The API now
   enforces server-side complexity at create: `HTTP 400 VALIDATION_ERROR
   "Password does not meet minimum requirements. Use a stronger password
   with a mix of uppercase, lowercase, numbers, and special characters."`
-  (`TestAccEmailAccountResource`). Strengthen the fixture password; consider
-  mirroring the rule in the schema validator/docs so users hit it at plan,
-  not apply.
-- [ ] **Test guards — reseller data sources.** The four reseller
+  (`TestAccEmailAccountResource`). **Fixed:** strengthened the create fixture
+  to satisfy all four classes, and documented the complexity requirement in
+  the `password_wo` schema description so users see it. A plan-time complexity
+  *validator* is deferred to an `ICEBOX:` note at the schema (the spec
+  declares only `minLength 8`; the exact server policy — which characters are
+  "special", all-four vs 3-of-4 — must be confirmed live before a client-side
+  regex risks rejecting passwords the API accepts).
+- [x] **Test guards — reseller data sources.** The four reseller
   data-source tests (`reseller_package`, `reseller_packages`,
-  `reseller_user`, `reseller_users`) fail `HTTP 403 This endpoint requires
+  `reseller_user`, `reseller_users`) failed `HTTP 403 This endpoint requires
   reseller privileges` on a non-reseller account; the reseller *resource*
-  tests already skip cleanly. Add the same skip-guard to the data-source
-  tests.
+  tests already skipped cleanly. **Fixed:** added a shared
+  `testAccResellerPreCheck` gate (skips unless `MXROUTE_TEST_RESELLER` opts
+  in) and wired it into all four. This account has no reseller access, so
+  they skip — reseller CRUD stays unexercisable until a reseller-capable
+  account is wired up.
 
 ### Needs live account only (no test domain; migration applies exercise these)
 

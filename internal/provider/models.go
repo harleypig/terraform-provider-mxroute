@@ -1,5 +1,12 @@
 package provider
 
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"sort"
+)
+
 // This file is the canonical Go representation of the MXroute API's data
 // models — one type per OpenAPI component schema, plus the inline response
 // shapes the endpoints without a named schema return. Resources and data
@@ -7,12 +14,91 @@ package provider
 // of declaring their own ad-hoc structs, so the model layer stays a single
 // source of truth that mirrors the spec. A nullable field is a pointer.
 
-// Domain is a mail domain on the account (GET /domains/{domain}).
+// Domain is a mail domain on the account (GET /domains/{domain}). Pointers is
+// always the list of pointer names, decoded tolerantly — see UnmarshalJSON.
 type Domain struct {
 	Domain      string   `json:"domain"`
 	MailHosting bool     `json:"mail_hosting"`
 	SSLEnabled  bool     `json:"ssl_enabled"`
 	Pointers    []string `json:"pointers"`
+}
+
+// UnmarshalJSON decodes a Domain, tolerating either shape the API uses for
+// pointers. The OpenAPI spec declares an array of strings, but the live
+// GET /domains/{domain} returns an object keyed by pointer name once the
+// domain has any pointer — decoding that into []string previously failed with
+// "cannot unmarshal object into Go struct field Domain.pointers". Either
+// shape reduces to the list of pointer names. See API-MAPPING.md.
+func (d *Domain) UnmarshalJSON(data []byte) error {
+	// A distinct type breaks the recursion into this method; Pointers is
+	// pulled out as raw JSON and decoded by shape below.
+	type domainAlias struct {
+		Domain      string          `json:"domain"`
+		MailHosting bool            `json:"mail_hosting"`
+		SSLEnabled  bool            `json:"ssl_enabled"`
+		Pointers    json.RawMessage `json:"pointers"`
+	}
+
+	var raw domainAlias
+
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	names, err := decodePointerNames(raw.Pointers)
+	if err != nil {
+		return err
+	}
+
+	d.Domain = raw.Domain
+	d.MailHosting = raw.MailHosting
+	d.SSLEnabled = raw.SSLEnabled
+	d.Pointers = names
+
+	return nil
+}
+
+// decodePointerNames extracts the pointer names from the two shapes the API
+// uses for a domain's pointers: a JSON array of strings (the spec) or a JSON
+// object keyed by pointer name (the live response). An absent or null value
+// yields no names. Object keys are sorted so state stays deterministic.
+func decodePointerNames(raw json.RawMessage) ([]string, error) {
+	trimmed := bytes.TrimSpace(raw)
+
+	if len(trimmed) == 0 || string(trimmed) == "null" {
+		return nil, nil
+	}
+
+	switch trimmed[0] {
+	case '[':
+		var names []string
+
+		if err := json.Unmarshal(trimmed, &names); err != nil {
+			return nil, err
+		}
+
+		return names, nil
+
+	case '{':
+		var obj map[string]json.RawMessage
+
+		if err := json.Unmarshal(trimmed, &obj); err != nil {
+			return nil, err
+		}
+
+		names := make([]string, 0, len(obj))
+
+		for name := range obj {
+			names = append(names, name)
+		}
+
+		sort.Strings(names)
+
+		return names, nil
+
+	default:
+		return nil, fmt.Errorf("unexpected pointers shape in domain response: %s", trimmed)
+	}
 }
 
 // EmailAccount is a mailbox (GET /domains/{domain}/email-accounts/{user}).

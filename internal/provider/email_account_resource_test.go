@@ -29,7 +29,11 @@ func TestAccEmailAccountResource(t *testing.T) {
 		CheckDestroy:             testAccCheckEmailAccountDestroy(t, domain, testAccEmailAccountUsername),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccEmailAccountResourceConfig(domain, testAccEmailAccountUsername, "s3cret-p4ss", 1),
+				// The API enforces password complexity at create (uppercase,
+				// lowercase, numbers, and a special character), so the fixture
+				// must satisfy all four — a lowercase+digit-only value is
+				// rejected with HTTP 400 VALIDATION_ERROR.
+				Config: testAccEmailAccountResourceConfig(domain, testAccEmailAccountUsername, "Tf-Acc3ss-P4ss!", 1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "domain", domain),
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "username", testAccEmailAccountUsername),
