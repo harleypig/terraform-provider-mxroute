@@ -130,27 +130,3 @@ probe.
 - [ ] **⟨reseller⟩** Whether the reseller API accepts a per-user quota PATCH —
   if not, our settable `mxroute_reseller_user` quota input is a misleading
   no-op and should become computed (as demon models it).
-
-## Documentation
-
-- [x] Provider-native versions of the mff usage guides. The
-  [mxroute-foundation-fabric][mff] repo ships two how-to guides in its `docs/`
-  — `quick-start.md` (stand up a domain + mailbox + forwarder) and
-  `email-management.md` (mailboxes, forwarders, spam filtering) — but they are
-  written around the **fabric modules** (`source =
-  ".../mxroute-foundation-fabric//modules/..."`, the module
-  `email_accounts = {…}` map shape, links to module READMEs). Author
-  provider-native equivalents under `templates/guides/*.md.tmpl` (rendered to
-  `docs/guides/` by `tfplugindocs generate`, so they appear as guide pages on
-  the registry alongside the Overview) that use the **resources directly** —
-  `mxroute_domain`, `mxroute_email_account`, `mxroute_forwarder`,
-  `mxroute_catch_all`, `mxroute_spam_*` — and drop the dev-override /
-  not-yet-on-Registry note now that the provider is published. Much of the
-  surrounding prose carries over largely unchanged: the scope caveat (the
-  provider manages the MXroute **account side** via the API, **not** DNS), the
-  MX / SPF / DKIM / DMARC record table, and the client-port list. Judgment
-  call while writing: whether these live better as provider guides here or stay
-  module-flavored in mff — the module map is a genuinely different UX from raw
-  resources, so a straight copy may not fit.
-
-[mff]: https://github.com/harleypig/mxroute-foundation-fabric
