@@ -3,6 +3,14 @@
 Open, actionable work only. Decisions already made live in
 [`adr/`](adr/README.md), not here.
 
+**This list is the v1.0.0 gate.** The provider stays `v0.x` until every
+task here is resolved — `v1` is the compatibility promise (breaking
+changes then require a major bump; see the maintainer's `git.md`
+*Versioning & tags*), and that promise can't be made while live-API
+shapes, acceptance findings, and reseller behavior are still open. The
+`0 → 1` jump is its own deliberate decision when the list empties, not
+an automatic consequence.
+
 ## Live review
 
 Every item here needs **live-account** verification — but they split by what
