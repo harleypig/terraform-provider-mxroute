@@ -96,6 +96,14 @@ the fix is usually a patch bump here.
   `Vulnerability scan` run and report but are not required (they skip / can
   fail on a newly-disclosed CVE without a code change). Merge methods: squash
   or merge; 0 required reviewers (solo).
+- **`auto-merge: enabled`.** The server-side ruleset (PR-only `master`,
+  required `Build` + `generate` checks) makes a manual merge gate redundant,
+  so invoking the **push-pr** skill is consent through merge on green CI — the
+  agent merges without a separate prompt. The merge still obeys the ruleset
+  (required checks, allowed methods); the opt-in skips only the human prompt.
+  Closing a PR always needs explicit instruction. The sentinel is read from
+  the **default branch**, so the PR that adds it still merges manually —
+  auto-merge applies from the next PR.
 - **Versioning:** semver `vX.Y.Z`, with the **MAJOR aligned to the MXroute
   API's major** (see *Versioning & tagging* below). A tag triggers the
   GoReleaser + GPG release that publishes to the Terraform Registry. Cut tags
