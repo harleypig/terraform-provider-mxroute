@@ -52,6 +52,13 @@ second group's slices.
 
 ### Needs live account only (no test domain; migration applies exercise these)
 
+**Live outcome 2026-07-07** (harleydev's five-mailbox apply on
+harleypig.com): `mxroute_email_account` **CREATE is proven** — five creates
+succeeded, and write-only `password_wo` plus `quota = 0` round-trip cleanly
+(a follow-up refresh/plan reports no changes). `limit` was omitted
+(`omitempty`), so the limit-at-create item below remains open, as do the
+`/quota`/spam-shape and `@`/`+` items.
+
 - [ ] Verify the `/quota` + `/quota/email` response enveloping (they may be
   unwrapped) and the spam **blacklist** GET response shape (assumed `[]string`
   like the whitelist). The demon provider decodes `/quota` **unenveloped**,
