@@ -38,3 +38,12 @@ Recipe skills: `terraform-provider-patterns` (this repo's acceptance tier),
 go test ./...      # unit (credential-free)
 make testacc       # acceptance (TF_ACC=1; needs `. bin/set_env` from harleydev)
 ```
+
+For the acceptance suite, prefer harleydev's
+**`bin/mxroute-provider-testacc`** over a bare `make testacc`: it bakes in the
+run-mechanics — a **real** terraform binary via `TF_ACC_TERRAFORM_PATH` (the
+PATH `terraform` is a docker wrapper that breaks plugin-testing's reattach),
+`MXROUTE_TEST_DOMAIN=harleypig.dev`, the `{harleypig.dev, harleydev.com}`
+domain allow-list guard, credential loading, and a confirmation gate before it
+touches the live account. Live tests run **on demand** this way, never in CI —
+see [ADR 0004](../adr/0004-no-live-acceptance-tests-in-ci.md).

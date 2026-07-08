@@ -35,21 +35,21 @@ the four reseller-403 data-source tests are **fixed** (see the changelog);
 what remains is itemized under *Findings from the first live testacc run*
 below.
 
-Local-run gotcha, now known: `make testacc` needs a **real** terraform
-binary via `TF_ACC_TERRAFORM_PATH` (e.g. `~/.cache/tf-acc/terraform`) —
-a docker-wrapped `terraform` on PATH breaks plugin-testing's
-`TF_REATTACH_PROVIDERS` injection, failing every test with `Inconsistent
-dependency lock file` before any API call. `make generate` hits the same
-docker-terraform wall from a different angle: its `terraform fmt -recursive
-../examples/` step fails with `No file or directory at ../examples` because
-the wrapper only mounts the tool's cwd — run it with the real binary on
-`PATH` (e.g. `PATH="$HOME/.cache/tf-acc:$PATH" make generate`).
+Running the suite is now one guarded command: harleydev's
+`bin/mxroute-provider-testacc` bakes in the real terraform binary
+(`TF_ACC_TERRAFORM_PATH`), `MXROUTE_TEST_DOMAIN=harleypig.dev`, the domain
+allow-list guard, credential loading, and a confirmation gate. (Deciding
+**not** to wire those into CI — run live tests locally on demand instead — is
+[ADR 0004](adr/0004-no-live-acceptance-tests-in-ci.md).)
 
-- [ ] Decide whether to set `MXROUTE_TEST_DOMAIN=harleypig.dev` as a CI
-  secret — the `Acceptance Tests` job currently **skips** the
-  domain-lifecycle tests without it. Deliberate call, not a checkbox:
-  with it set, every PR's CI creates/destroys real domains on the live
-  account (the same account hosting harleypig.com production mail).
+Docker-terraform gotcha, still manual for `make generate`: its `terraform fmt
+-recursive ../examples/` step fails with `No file or directory at ../examples`
+because the docker-wrapped `terraform` on PATH only mounts the tool's cwd —
+run it with the real binary on `PATH` (e.g. `PATH="$HOME/.cache/tf-acc:$PATH"
+make generate`). The same wrapper breaks `make testacc` too (plugin-testing's
+`TF_REATTACH_PROVIDERS` injection fails with `Inconsistent dependency lock
+file`), which is exactly what the runner above handles.
+
 - [ ] Confirm the documented `ssl_enabled` behavior: the attribute description
   states it is `false` immediately after domain create and flips to `true`
   asynchronously once AutoSSL issues the cert (inferred from DirectAdmin, not
