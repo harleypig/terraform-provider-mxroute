@@ -46,6 +46,37 @@ func TestAccForwarderResource(t *testing.T) {
 	})
 }
 
+// TestAccForwarderResource_plusInAlias exercises pathSeg's encoding of a `+`
+// in a path segment. The forwarder is created via the request body, but its
+// teardown DELETE targets /domains/{domain}/forwarders/{alias} with
+// pathSeg(alias) — CheckDestroy fails if the `+` alias isn't matched (the
+// forwarder lingers), which is exactly the "does the API need @/+
+// percent-encoded" question. If this fails live, switch pathSeg to a stricter
+// encoder that escapes `@`/`+` too.
+func TestAccForwarderResource_plusInAlias(t *testing.T) {
+	domain := testAccTestDomain(t)
+	alias := "foo+bar"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckForwarderDestroy(t, domain, alias),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccForwarderResourceConfig(domain, alias),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("mxroute_forwarder.test", "alias", alias),
+					resource.TestCheckResourceAttr("mxroute_forwarder.test", "id", domain+"/"+alias),
+					// Read filters the list by alias, so a passing read already
+					// proves the `+` survives create + list; CheckDestroy proves
+					// the DELETE path segment matches it.
+					resource.TestCheckResourceAttr("mxroute_forwarder.test", "destinations.#", "1"),
+				),
+			},
+		},
+	})
+}
+
 func testAccForwarderResourceConfig(domain, alias string) string {
 	return fmt.Sprintf(`
 resource "mxroute_domain" "test" {

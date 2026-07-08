@@ -51,7 +51,7 @@ func (d *DomainDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 				Computed:            true,
 			},
 			"ssl_enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether SSL is enabled for the domain. Server-managed via MXroute's AutoSSL: typically `false` immediately after a domain is created and becomes `true` asynchronously — often within ~24 hours — once the certificate is issued.",
+				MarkdownDescription: "Whether a TLS certificate is active for the domain. The MXroute API exposes no certificate-request operation, so this is status only — certificates are provisioned out-of-band (the MXroute/DirectAdmin control panel), and the value may be `false` immediately after a domain is created and turns `true` once a certificate has been issued.",
 				Computed:            true,
 			},
 			"pointers": schema.ListAttribute{
