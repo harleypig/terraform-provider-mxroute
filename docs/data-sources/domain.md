@@ -30,4 +30,4 @@ data "mxroute_domain" "example" {
 - `id` (String) Data source identifier — the domain name.
 - `mail_hosting` (Boolean) Whether mail hosting is enabled for the domain.
 - `pointers` (List of String) Domain pointers (aliases) that resolve to this domain.
-- `ssl_enabled` (Boolean) Whether SSL is enabled for the domain. Server-managed via MXroute's AutoSSL: typically `false` immediately after a domain is created and becomes `true` asynchronously — often within ~24 hours — once the certificate is issued.
+- `ssl_enabled` (Boolean) Whether a TLS certificate is active for the domain. The MXroute API exposes no certificate-request operation, so this is status only — certificates are provisioned out-of-band (the MXroute/DirectAdmin control panel), and the value may be `false` immediately after a domain is created and turns `true` once a certificate has been issued.

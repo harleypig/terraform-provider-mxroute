@@ -27,10 +27,3 @@
   fresh-vs-established domain (a read against harleypig.com is safe anytime);
   open an MXroute ticket if it reproduces generally. Blocks the spam-entry
   DELETE path (and its `@`/`+` encoding) until the creates succeed.
-- [ ] Verify the documented `ssl_enabled` timing: the attribute is described
-  as `false` immediately after domain create, flipping to `true`
-  asynchronously once AutoSSL issues the cert (inferred from DirectAdmin, not
-  the MXroute API). Confirm the real timing and whether a post-create refresh
-  is needed; correct the attribute description or the read if it's wrong.
-  Needs a fresh domain create to observe, and is timing-dependent — not a
-  deterministic acceptance test.

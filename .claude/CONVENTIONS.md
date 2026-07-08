@@ -28,6 +28,14 @@ An MIT-licensed Terraform provider for MXroute email hosting, built on
 - Provider config takes the three values (env fallback to the `MXROUTE_*`
   vars); the API key attribute is `Sensitive`.
 
+**Known limitation — no SSL/certificate management.** The API exposes no
+operation to request or issue a TLS certificate; `ssl_enabled` is a
+response-only boolean on the domain (verified against `api/openapi.yaml` — no
+POST/PATCH or AutoSSL trigger). Certificates are provisioned out-of-band (the
+MXroute/DirectAdmin panel), so `mxroute_domain.ssl_enabled` is read-only
+status the provider can only report — don't re-attempt building SSL management
+against this API.
+
 ### Tracking the API spec
 
 The official OpenAPI 3 document is served (unauthenticated) at

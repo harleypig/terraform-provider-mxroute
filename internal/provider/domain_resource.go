@@ -66,8 +66,13 @@ func (r *DomainResource) Schema(ctx context.Context, req resource.SchemaRequest,
 					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
+			// ssl_enabled is read-only: the MXroute API exposes no operation to
+			// request or issue a certificate (verified against api/openapi.yaml
+			// — ssl_enabled is a response-only boolean, with no POST/PATCH or
+			// AutoSSL trigger). Certificates are provisioned out-of-band, so the
+			// provider can only report the status, never set or trigger it.
 			"ssl_enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether SSL is enabled for the domain. Server-managed via MXroute's AutoSSL, so this attribute is read-only (there is no API input to set it): it is typically `false` immediately after a domain is created and becomes `true` asynchronously — often within ~24 hours — once the certificate is issued.",
+				MarkdownDescription: "Whether a TLS certificate is active for the domain. **Read-only:** the MXroute API exposes no operation to request or issue a certificate, so this cannot be set or triggered through the provider — it reports status only. Certificates are provisioned out-of-band (the MXroute/DirectAdmin control panel), so the value may be `false` immediately after a domain is created and turns `true` once a certificate has been issued.",
 				Computed:            true,
 			},
 			"pointers": schema.ListAttribute{
