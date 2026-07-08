@@ -86,7 +86,12 @@ the fix is usually a patch bump here.
   `detect-private-key` (secrets) in pre-commit.
 - **Tests:** `go test -cover` (unit) + `terraform-plugin-testing` acceptance —
   see [TESTS.md](TESTS.md).
-- **Docs:** `tfplugindocs` via `go generate`, kept current.
+- **Docs:** `tfplugindocs` via `go generate`, kept current. `make generate`
+  needs a **real** terraform on `PATH` — the docker-wrapped `terraform` fails
+  its `terraform fmt -recursive ../examples/` step with `No file or directory
+  at ../examples` (the wrapper only mounts the tool's cwd). Run it with the
+  cached binary, e.g. `PATH="$HOME/.cache/tf-acc:$PATH" make generate`. (Same
+  wrapper caveat as `make testacc`; see [TESTS.md](TESTS.md).)
 
 ## Merge policy & versioning
 
@@ -138,7 +143,11 @@ The API declares its own version in its OpenAPI `info.version`
   version is **documented**, not yet encoded in the major. The deliberate
   **`0 → 1` stability jump** is when the provider adopts the API's current
   major as its own — the first stable tag is `1.0.0`, declared to target API
-  `1.x`.
+  `1.x`. The jump is **gated on clearing the open live-verification and
+  acceptance work in [`TODO.md`](../TODO.md)**: `v1` is the compatibility
+  promise, and it can't be made while live-API shapes and acceptance findings
+  are still open. Emptying the TODO enables the jump; it does not force it —
+  the `0 → 1` call stays deliberate.
 - **Every release documents its targeted API version** — a one-line
   `Compatibility: targets MXroute API 1.x` in the release notes / changelog —
   so the tag ↔ API relationship stays explicit even while alpha encodes only

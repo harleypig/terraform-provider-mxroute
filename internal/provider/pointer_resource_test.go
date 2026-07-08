@@ -34,6 +34,16 @@ func TestAccPointerResource(t *testing.T) {
 					resource.TestCheckResourceAttr("mxroute_pointer.test", "id", domain+"/"+pointer),
 					resource.TestCheckResourceAttr("mxroute_pointer.test", "alias", "true"),
 					resource.TestCheckResourceAttrSet("mxroute_pointer.test", "type"),
+					// Confirms the Domain.pointers decode against a live, populated
+					// response: with exactly one pointer on the fresh domain, the
+					// domain's pointers list must hold its name. Before the decode
+					// fix this GET failed outright ("cannot unmarshal object into
+					// []string"). pointers.0 asserts the object's keys are the
+					// pointer names (the assumed shape) — if that assertion fails
+					// live, the names live in the values instead; adjust
+					// decodePointerNames accordingly.
+					resource.TestCheckResourceAttr("data.mxroute_domain.test", "pointers.#", "1"),
+					resource.TestCheckResourceAttr("data.mxroute_domain.test", "pointers.0", pointer),
 				),
 			},
 			{
@@ -55,6 +65,13 @@ resource "mxroute_domain" "test" {
 resource "mxroute_pointer" "test" {
   domain  = mxroute_domain.test.domain
   pointer = %[2]q
+}
+
+# Read the domain back after the pointer exists so its computed pointers
+# list is populated — this is what exercises the Domain.pointers decode.
+data "mxroute_domain" "test" {
+  domain     = mxroute_domain.test.domain
+  depends_on = [mxroute_pointer.test]
 }
 `, domain, pointer)
 }
