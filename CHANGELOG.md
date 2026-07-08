@@ -1,3 +1,21 @@
+## Unreleased
+
+Compatibility: targets MXroute API 1.x.
+
+BUG FIXES:
+
+* resource/mxroute_domain, data-source/mxroute_domain: reading a domain that
+  has one or more pointers no longer fails with `cannot unmarshal object into
+  Go struct field Domain.pointers of type []string`. The live API returns a
+  domain's `pointers` as an object keyed by pointer name (not the documented
+  array of strings); both shapes now decode to the list of pointer names.
+
+NOTES:
+
+* resource/mxroute_email_account: the `password_wo` documentation now notes
+  that the API enforces password complexity (a mix of uppercase, lowercase,
+  numbers, and special characters) at create.
+
 ## 0.3.0
 
 Compatibility: targets MXroute API 1.x.
