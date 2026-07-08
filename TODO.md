@@ -133,7 +133,7 @@ probe.
 
 ## Documentation
 
-- [ ] Provider-native versions of the mff usage guides. The
+- [x] Provider-native versions of the mff usage guides. The
   [mxroute-foundation-fabric][mff] repo ships two how-to guides in its `docs/`
   — `quick-start.md` (stand up a domain + mailbox + forwarder) and
   `email-management.md` (mailboxes, forwarders, spam filtering) — but they are
