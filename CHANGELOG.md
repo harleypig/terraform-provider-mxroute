@@ -1,4 +1,4 @@
-## Unreleased
+## 0.4.0
 
 Compatibility: targets MXroute API 1.x.
 
