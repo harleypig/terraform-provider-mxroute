@@ -19,6 +19,11 @@ NOTES:
 * resource/mxroute_email_account: the `password_wo` documentation now notes
   that the API enforces password complexity (a mix of uppercase, lowercase,
   numbers, and special characters) at create.
+* resource/mxroute_domain, data-source/mxroute_domain: the `ssl_enabled`
+  documentation is corrected — the MXroute API has no operation to request or
+  issue a certificate, so the attribute is read-only status (certificates are
+  provisioned out-of-band). Drops the previous unverifiable AutoSSL / ~24-hour
+  timing claims.
 
 ## 0.3.0
 
