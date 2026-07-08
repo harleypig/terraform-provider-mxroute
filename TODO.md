@@ -2,20 +2,18 @@
 
 ## Acceptance testing
 
-- [ ] **BLOCKED (MXroute-side) — the test domain can't be created.** Adding
-  `harleypig.dev` fails `HTTP 422 BUSINESS_ERROR "Domain verification
-  required"` via **both** the API and the panel, even though the required
-  `_da-verify-7363530376cb3483f57f76d42a9055eb` TXT (value `domain-verified`)
-  is published, authoritative (served by `ns4.linode.com`), and matches the
-  panel and the API's own `/verification-key` byte-for-byte. Every test that
-  creates the throwaway domain dies at step 1; account-level data-source tests
-  still pass, so auth/client are fine. Most likely a per-domain block or
-  cooldown from the 2026-07-09 rapid add/remove cycling — which **disproves**
-  that run's "the 422 is moot in practice / TXT standing → re-adds always
-  pass" note. MXroute support ticket opened 2026-07-08 (asks: cooldown/block?
-  account-wide broken check? a test/sandbox path or dry-run flag to avoid the
-  churn — none is documented in the spec or docs). Re-run
-  `bin/mxroute-provider-testacc` once MXroute clears it.
+- [x] **RESOLVED (2026-07-08) — the test domain creates again.** The
+  `HTTP 422 "Domain verification required"` block on `harleypig.dev` was an
+  **MXroute-side glitch** (their Tailscale DNS acting up), cleared by MXroute
+  tier-3 support — **not** a per-domain cooldown/block, and **not** anything on
+  our side: our `_da-verify` TXT was published + authoritative throughout, and
+  `/verification-key` matched byte-for-byte. A re-run then created the domain
+  and drove the full lifecycle (coverage 24.9%→51.5%). **If it recurs:** a
+  domain-add 422 while `dig TXT _da-verify-<key>.<domain>` resolves
+  authoritatively **and** `TestAccVerificationKeyDataSource` passes is
+  MXroute-side — escalate, don't touch DNS/DNSSEC. Full detection signature +
+  incident writeup live in harleydev `e2e/mxroute.md` ("Known incident");
+  harleydev's `bin/mxroute-provider-testacc` now DNS-preflights before the run.
 - [ ] Grow `TF_ACC` acceptance coverage toward all resources and data sources
   (CRUD + import round-trips), scoped to **provider-internals the fabric can't
   surface** — `ImportState`, write-only `password_wo` create/rotate, error
@@ -33,8 +31,9 @@
   left is depth, not breadth — richer data-source content assertions and
   multi-attribute update permutations, added as needs arise.
 - [ ] Confirm the live assertions now baked into the suite pass on a green
-  `make testacc` run (**blocked by the domain-verification item above** —
-  these all create the test domain). `TestAccPointerResource` asserts the
+  `make testacc` run (the 422 block is **resolved** 2026-07-08, so these run
+  now; a *fully* green run still waits on the spam-writes-500 bug below).
+  `TestAccPointerResource` asserts the
   domain's `pointers` list holds the created pointer (the `Domain.pointers`
   decode against a live populated response);
   `TestAccForwarderResource_plusInAlias` exercises the `+`-in-alias path
@@ -48,7 +47,10 @@
 - [ ] **Bug: spam writes 500 on a fresh domain.** `mxroute_spam_settings`,
   `mxroute_spam_blacklist_entry`, and `mxroute_spam_whitelist_entry` all fail
   `HTTP 500 Failed to update spam settings/list` against a just-created domain
-  (both spam data sources pass, so the GET shapes are fine). Investigate
-  fresh-vs-established domain (a read against harleypig.com is safe anytime);
-  open an MXroute ticket if it reproduces generally. Blocks the spam-entry
-  DELETE path (and its `@`/`+` encoding) until the creates succeed.
+  (both spam data sources pass, so the GET shapes are fine). **Confirmed still
+  reproducing on the 2026-07-08 live run** once the 422 cleared — the three
+  spam writes are the only failures; reads, validators, and
+  `VerificationKeyDataSource` pass. Investigate fresh-vs-established domain (a
+  read against harleypig.com is safe anytime); open an MXroute ticket if it
+  reproduces generally. Blocks the spam-entry DELETE path (and its `@`/`+`
+  encoding) until the creates succeed.
