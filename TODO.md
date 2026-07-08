@@ -29,14 +29,21 @@ fail**, account clean afterward (only harleypig.com on it). Domain
 create/destroy cycled repeatedly within the one run — with the TXT
 standing, re-adds always pass, so the destroy → recreate 422 question is
 **moot in practice** (whether a TXT-less re-add would 422 was not
-exercised, deliberately: the TXT never comes down). The 9 failures are
-itemized under *Findings from the first live testacc run* below.
+exercised, deliberately: the TXT never comes down). Of the 9 failures, the
+`Domain.pointers` decode bug, the weak email-account fixture password, and
+the four reseller-403 data-source tests are **fixed** (see the changelog);
+what remains is itemized under *Findings from the first live testacc run*
+below.
 
 Local-run gotcha, now known: `make testacc` needs a **real** terraform
 binary via `TF_ACC_TERRAFORM_PATH` (e.g. `~/.cache/tf-acc/terraform`) —
 a docker-wrapped `terraform` on PATH breaks plugin-testing's
 `TF_REATTACH_PROVIDERS` injection, failing every test with `Inconsistent
-dependency lock file` before any API call.
+dependency lock file` before any API call. `make generate` hits the same
+docker-terraform wall from a different angle: its `terraform fmt -recursive
+../examples/` step fails with `No file or directory at ../examples` because
+the wrapper only mounts the tool's cwd — run it with the real binary on
+`PATH` (e.g. `PATH="$HOME/.cache/tf-acc:$PATH" make generate`).
 
 - [ ] Decide whether to set `MXROUTE_TEST_DOMAIN=harleypig.dev` as a CI
   secret — the `Acceptance Tests` job currently **skips** the
@@ -63,13 +70,13 @@ dependency lock file` before any API call.
 
 ### Findings from the first live testacc run (2026-07-09)
 
-- [ ] **Bug — `Domain.pointers` decode.** `GET /domains/<domain>` returns
-  `pointers` as an **object**, but the client model decodes `[]string`:
-  `json: cannot unmarshal object into Go struct field Domain.pointers of
-  type []string`. The pointer CREATE succeeded and `TestAccPointersDataSource`
-  **passed** (the list endpoint's own shape is fine) — it is specifically the
-  Domain model's field. Failed `TestAccPointerResource` at the post-apply
-  refresh. Fix the model shape; note it in `API-MAPPING.md`.
+- [ ] **Confirm the `Domain.pointers` live object shape.** The decode fix
+  tolerates both an array of strings and an object keyed by pointer name, and
+  assumes the object's **keys** are the pointer names (the DirectAdmin
+  convention) — unverified against a live response. Re-run
+  `TestAccPointerResource` (or inspect a live `GET /domains/<domain>` with a
+  pointer present) to confirm the populated `pointers` list is right; adjust
+  `decodePointerNames` if the names live in the values instead.
 - [ ] **Spam writes 500 on a fresh domain.** All three spam writes —
   `mxroute_spam_settings`, `mxroute_spam_blacklist_entry`,
   `mxroute_spam_whitelist_entry` — failed `HTTP 500 Failed to update spam
@@ -81,19 +88,6 @@ dependency lock file` before any API call.
   ticket if it reproduces generally. Until resolved, the spam-entry DELETE
   path (and its `@`/`+` encoding question) stays unexercised — the creates
   never succeeded.
-- [ ] **Test fixture — email-account password too weak.** The API now
-  enforces server-side complexity at create: `HTTP 400 VALIDATION_ERROR
-  "Password does not meet minimum requirements. Use a stronger password
-  with a mix of uppercase, lowercase, numbers, and special characters."`
-  (`TestAccEmailAccountResource`). Strengthen the fixture password; consider
-  mirroring the rule in the schema validator/docs so users hit it at plan,
-  not apply.
-- [ ] **Test guards — reseller data sources.** The four reseller
-  data-source tests (`reseller_package`, `reseller_packages`,
-  `reseller_user`, `reseller_users`) fail `HTTP 403 This endpoint requires
-  reseller privileges` on a non-reseller account; the reseller *resource*
-  tests already skip cleanly. Add the same skip-guard to the data-source
-  tests.
 
 ### Needs live account only (no test domain; migration applies exercise these)
 

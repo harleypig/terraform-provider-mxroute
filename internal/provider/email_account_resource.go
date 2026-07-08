@@ -78,9 +78,16 @@ func (r *EmailAccountResource) Schema(ctx context.Context, req resource.SchemaRe
 			"domain":   requiredReplaceString("The domain the mailbox belongs to (e.g. `example.com`). Changing this replaces the resource."),
 			"username": requiredReplaceString("The local part of the address (the name before the `@`). Changing this replaces the resource."),
 			"password_wo": schema.StringAttribute{
-				MarkdownDescription: "The mailbox password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. **Required when creating** a mailbox; it may be omitted for a mailbox that already exists, in which case the password is left unchanged. To rotate the password on an existing mailbox, set the new value and bump `password_wo_version`.",
+				MarkdownDescription: "The mailbox password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. **Required when creating** a mailbox; it may be omitted for a mailbox that already exists, in which case the password is left unchanged. To rotate the password on an existing mailbox, set the new value and bump `password_wo_version`. The API enforces complexity at create: use a mix of uppercase, lowercase, numbers, and special characters, or the create fails with a `VALIDATION_ERROR`.",
 				Optional:            true,
 				WriteOnly:           true,
+				// ICEBOX: password complexity validator (uppercase / lowercase /
+				// digit / special) — mirror the server rule at plan time so users
+				// fail on plan, not apply. Deferred: the spec declares only
+				// minLength 8 (no pattern), and the exact server policy (which
+				// characters count as "special", all-four vs 3-of-4) is unknown,
+				// so a client-side regex could reject passwords the API accepts.
+				// Confirm the precise rule live before enforcing it.
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(8),
 				},
