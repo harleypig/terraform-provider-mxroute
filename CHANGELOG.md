@@ -12,6 +12,10 @@ BUG FIXES:
 
 NOTES:
 
+* docs: added two provider guides — **Quick Start** (stand up a domain,
+  mailbox, and forwarder) and **Email Management** (mailboxes, forwarders,
+  catch-all, and spam filtering) — rendered to the Registry from
+  `templates/guides/`, using the provider's resources directly.
 * resource/mxroute_email_account: the `password_wo` documentation now notes
   that the API enforces password complexity (a mix of uppercase, lowercase,
   numbers, and special characters) at create.
