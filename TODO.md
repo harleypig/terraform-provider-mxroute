@@ -25,6 +25,15 @@
   element-content assertions on the remaining list data sources and richer
   update permutations — added as needs arise. (These live assertions were
   confirmed on the 2026-07-08 run — see below.)
+- [ ] **Unverified-domain 422 negative** (`TestAccDomainResource_unverified422`)
+  — BUILT: scenario 6 of harleydev's `e2e/mxroute.md`, rerouted here because
+  native `terraform test` can't assert a provider apply-error
+  (`expect_failures` catches only condition/validation failures). Applies
+  `mxroute_domain` on an unverified domain and `ExpectError`s MXroute's
+  `HTTP 422 "Domain verification required"`. Needs a genuinely unverified,
+  allow-listed domain — set `MXROUTE_TEST_UNVERIFIED_DOMAIN=harleydev.com`
+  (skips when unset; never the live domain). Awaits live confirmation on the
+  next `make testacc`.
 - [ ] A live `make testacc` run (2026-07-08, coverage 52.7%) confirmed the
   depth and prior assertions pass: `TestAccPointerResource` (the
   `Domain.pointers` decode against a live populated response),
