@@ -180,20 +180,16 @@ The API declares its own version in its OpenAPI `info.version`
   - **PATCH** — a provider fix, dependency bump, or docs-only release. These
     ship **without** any API version change — the reason literal API-lockstep
     is rejected (it would forbid an independent provider fix).
-- **Alpha (now) — `v0.y.z`.** The provider is pre-stable, so it stays on
-  `v0.y.z` (breakage expected, loose `y.z`; `git.md`) and the targeted API
-  version is **documented**, not yet encoded in the major. The deliberate
-  **`0 → 1` stability jump** is when the provider adopts the API's current
-  major as its own — the first stable tag is `1.0.0`, declared to target API
-  `1.x`. The jump is **gated on clearing the open live-verification and
-  acceptance work in [`TODO.md`](../TODO.md)**: `v1` is the compatibility
-  promise, and it can't be made while live-API shapes and acceptance findings
-  are still open. Emptying the TODO enables the jump; it does not force it —
-  the `0 → 1` call stays deliberate.
+- **Stable (current) — `v1.y.z`.** The provider crossed the deliberate
+  **`0 → 1` stability jump** at `v1.0.0`, adopting the API's current major (1)
+  as its own — `v1` targets API `1.x`. It is now a compatibility promise, so
+  `y.z` are **strict** (`git.md`: once `X ≥ 1`, a breaking change requires a
+  major bump). The pre-1.0 alpha line (`v0.y.z`, loose `y.z`, breakage
+  expected) is closed; the jump was gated on clearing the live-verification and
+  acceptance work in [`TODO.md`](../TODO.md), which was done before `v1.0.0`.
 - **Every release documents its targeted API version** — a one-line
   `Compatibility: targets MXroute API 1.x` in the release notes / changelog —
-  so the tag ↔ API relationship stays explicit even while alpha encodes only
-  the minor.
+  so the tag ↔ API relationship stays explicit.
 
 Tags are **annotated**, cut at the merge commit on `master`, via the
 `release-tag` skill. See [RELEASING.md](../RELEASING.md) for the release

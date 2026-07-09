@@ -44,9 +44,10 @@ short:
 - **MINOR / PATCH** move on the provider's own cadence — a new resource is a
   minor, a fix/deps/docs release is a patch, both **without** an API version
   change.
-- **Alpha now:** stay on `v0.y.z` (the API major is documented, not yet in the
-  tag); the deliberate `0 → 1` jump adopts the API major (first stable tag
-  `1.0.0`, targeting API `1.x`).
+- **Stable (current):** the provider crossed the deliberate `0 → 1` jump at
+  `v1.0.0`, adopting the API major into the tag (major `1` targets API `1.x`).
+  `v1` is a compatibility promise, so a breaking change now requires a major
+  bump (`git.md`: strict `y.z` once `X ≥ 1`).
 - **Note the targeted API version** in the release — a `Compatibility: targets
   MXroute API 1.x` line.
 
@@ -58,8 +59,8 @@ cannot be unpublished.
    `release-tag` skill, which automates this):
 
    ```sh
-   git tag -a v0.1.0 -m "v0.1.0"
-   git push origin v0.1.0
+   git tag -a v1.0.0 -m "v1.0.0"
+   git push origin v1.0.0
    ```
 
 3. The `release` workflow builds all platforms, signs the `SHA256SUMS` with
