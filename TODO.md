@@ -2,20 +2,14 @@
 
 ## Acceptance testing
 
-- [x] Added a `TESTARGS` passthrough to the `testacc` make target for scoped
-  live runs (`make testacc TESTARGS='-run TestAccFoo'`).
-- [x] **v1 live-verification passed.** The suite is green/skip against the
-  live account: `TestAccDomainResource_unverified422`,
-  `TestAccForwarderResource_sentinelDestination`, `TestAccQuotaDataSource`,
-  and the full resource/data-source lifecycle all confirmed. The two live
-  findings became **documented limitations** (CONVENTIONS *Known
-  limitation*), not blockers: spam writes 500 (a mailbox does not help; write
-  tests skipped via `skipSpamWriteKnownLimitation`, MXroute ticket deferred)
-  and `email_account.limit` is unreliable (made **read-only**, MXroute ticket
-  deferred). The v0→v1 gate is clear.
 - [ ] Grow `TF_ACC` acceptance coverage further only as needs arise —
   element-content assertions on the remaining list data sources, richer
   multi-attribute update permutations. Not a v1 gate (depth, not correctness).
+- [ ] Have harleydev's `bin/mxroute-provider-testacc` optionally set
+  `MXROUTE_TEST_UNVERIFIED_DOMAIN` and pass a `-run` filter, so the full v1
+  verification (including `TestAccDomainResource_unverified422`) runs through
+  the sanctioned runner instead of a hand-exported env var + a direct
+  `go test -run`.
 
 ## Release
 
