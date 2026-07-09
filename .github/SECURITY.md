@@ -2,8 +2,9 @@
 
 ## Supported versions
 
-This provider is pre-1.0 (alpha). Security fixes are made against the latest
-release only; please upgrade to the newest tag before reporting.
+This provider follows semantic versioning (current major: 1). Security fixes
+are made against the latest release only; please upgrade to the newest tag
+before reporting.
 
 ## Reporting a vulnerability
 
