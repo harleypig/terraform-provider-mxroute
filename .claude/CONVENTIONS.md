@@ -36,16 +36,29 @@ MXroute/DirectAdmin panel), so `mxroute_domain.ssl_enabled` is read-only
 status the provider can only report — don't re-attempt building SSL management
 against this API.
 
-**Known limitation — `email_account.limit` is not settable at create.**
-Confirmed live (2026-07-08): the API **ignores** `limit` on the create call (a
-new mailbox is always the `9600` default, which is also the maximum), **rejects**
-a `limit` change sent without a password, but **honors** a `limit` change on an
-update that also rotates the password. `quota` has none of these quirks. The
-provider keeps `limit` settable and documents the create-then-rotate path
-(schema description + the `limit` ICEBOX in `email_account_resource.go`) rather
-than making it read-only — don't re-attempt sending `limit` at create expecting
-it to stick. Consider an MXroute support ticket once we have more experience
-with the endpoint.
+**Known limitation — `email_account.limit` is read-only.** Confirmed live: the
+API does **not** reliably honor a user-set `limit`. It **ignores** the value
+at create (a new mailbox is always the `9600` default, which is also the max),
+**rejects** a change sent without a password (HTTP 400), and even a change
+sent **with** a password rotation is applied only **intermittently** — the
+same path returned the requested `5000` twice, then the `9600` default. Rather
+than ship a settable attribute whose `apply` randomly fails, the provider
+exposes `limit` **read-only** (dropped from the create/update bodies; the
+server value is read back). `quota` has none of these quirks. Don't re-attempt
+making `limit` settable unless MXroute fixes the write behaviour. TODO: file
+an MXroute bug report for the unreliable/undocumented `limit` writes (see the
+`limit` comment in `email_account_resource.go`).
+
+**Known limitation — spam writes 500.** Confirmed live (2026-07-08 and the v1
+run): every spam **write** — `mxroute_spam_settings` (PATCH `high_score`), and
+`mxroute_spam_blacklist_entry` / `mxroute_spam_whitelist_entry` (POST `entry`)
+— fails `HTTP 500 "Failed to update spam settings/list"` on the test domain,
+while both spam **data sources** (the GETs) succeed. Provisioning a mailbox
+first does **not** help (the per-DirectAdmin-user SpamAssassin hypothesis is
+disproven). The write resources are implemented and correct against the spec,
+but their acceptance tests are **skipped** (`skipSpamWriteKnownLimitation`)
+until the API is fixed; the spam-list DELETE path-encoding stays unverified
+as a result. TODO: file an MXroute bug report for the spam-write 500s.
 
 ### Tracking the API spec
 

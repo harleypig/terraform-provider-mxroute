@@ -37,7 +37,21 @@ func testAccCheckSpamSettingsDestroy(_ *terraform.State) error {
 	return nil
 }
 
+// skipSpamWriteKnownLimitation skips a spam-WRITE acceptance test. Every spam
+// write (settings PATCH, blacklist/whitelist POST) returns HTTP 500 on the
+// MXroute API — a documented known limitation (see CONVENTIONS *Known
+// limitation*); a provisioned mailbox does not help. The spam data-source
+// reads are unaffected and stay covered. Remove the skip once MXroute fixes
+// the writes; the `@`-containing entries will then also exercise the DELETE
+// path-encoding, still unverified.
+func skipSpamWriteKnownLimitation(t *testing.T) {
+	t.Helper()
+	t.Skip("spam writes 500 on the MXroute API — known limitation (see CONVENTIONS); reads are covered")
+}
+
 func TestAccSpamSettingsResource(t *testing.T) {
+	skipSpamWriteKnownLimitation(t)
+
 	domain := testAccTestDomain(t)
 
 	resource.Test(t, resource.TestCase{

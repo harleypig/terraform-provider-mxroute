@@ -39,10 +39,9 @@ func TestAccEmailAccountResource(t *testing.T) {
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "username", testAccEmailAccountUsername),
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "id", domain+"/"+testAccEmailAccountUsername),
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "email", testAccEmailAccountUsername+"@"+domain),
-					// The API ignores `limit` at create — a new mailbox always
-					// starts at the 9600 default (see the limit ICEBOX in
-					// email_account_resource.go). Setting it here is what a rotate
-					// step does; see TestAccEmailAccountResource_passwordRotation.
+					// `limit` is read-only (the API won't reliably honor a set
+					// value — see the limit comment in email_account_resource.go);
+					// a fresh mailbox reports the 9600 default.
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "limit", "9600"),
 					// The write-only password is never stored in state.
 					resource.TestCheckNoResourceAttr("mxroute_email_account.test", "password_wo"),
@@ -88,27 +87,6 @@ func TestAccEmailAccountResource_createRequiresPassword(t *testing.T) {
 	})
 }
 
-// TestAccEmailAccountResource_limitValidator asserts the plan-time upper bound
-// on limit (spec maximum 9600). No PreCheck and no live account: the validator
-// fires during plan, before any API call.
-func TestAccEmailAccountResource_limitValidator(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: `
-resource "mxroute_email_account" "test" {
-  domain      = "example.com"
-  username    = "tfacctest"
-  password_wo = "s3cret-p4ss"
-  limit       = 99999
-}`,
-				ExpectError: regexp.MustCompile("at most 9600"),
-			},
-		},
-	})
-}
-
 // TestAccEmailAccountResource_passwordLengthValidator asserts the plan-time
 // minimum password length (spec minLength 8). Fires during plan.
 func TestAccEmailAccountResource_passwordLengthValidator(t *testing.T) {
@@ -133,10 +111,7 @@ resource "mxroute_email_account" "test" {
 // sends the new password on update (a write-only value cannot be diffed, so the
 // version trigger is what drives it). The password never lands in state, so the
 // assertions are that the rotation applies cleanly, the version advances, and
-// password_wo stays absent from state. The rotate step also sets `limit`: the
-// API only honors a `limit` change on an update that carries a password, so a
-// rotation is the one path that can change it (see the limit ICEBOX in
-// email_account_resource.go).
+// password_wo stays absent from state.
 func TestAccEmailAccountResource_passwordRotation(t *testing.T) {
 	domain := testAccTestDomain(t)
 
@@ -156,13 +131,10 @@ func TestAccEmailAccountResource_passwordRotation(t *testing.T) {
 				),
 			},
 			{
-				// Rotate: new password, version bumped 1 -> 2, and set limit in
-				// the same update — the API honors a limit change only when a
-				// password rides along, so this is the one path that changes it.
-				Config: testAccEmailAccountResourceConfigLimit(domain, username, "N3w-R0tated-P4ss!", 2, 5000),
+				// Rotate: new password, version bumped 1 -> 2.
+				Config: testAccEmailAccountResourceConfig(domain, username, "N3w-R0tated-P4ss!", 2),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "password_wo_version", "2"),
-					resource.TestCheckResourceAttr("mxroute_email_account.test", "limit", "5000"),
 					resource.TestCheckNoResourceAttr("mxroute_email_account.test", "password_wo"),
 				),
 			},
@@ -183,26 +155,6 @@ resource "mxroute_email_account" "test" {
   password_wo_version = %[4]d
 }
 `, domain, username, password, passwordVersion)
-}
-
-// testAccEmailAccountResourceConfigLimit is the password-bearing config with an
-// explicit limit. The MXroute API only honors `limit` on an update that also
-// rotates the password, so this is used for the rotate-and-set-limit step —
-// never at create, where the API ignores it.
-func testAccEmailAccountResourceConfigLimit(domain, username, password string, passwordVersion, limit int) string {
-	return fmt.Sprintf(`
-resource "mxroute_domain" "test" {
-  domain = %[1]q
-}
-
-resource "mxroute_email_account" "test" {
-  domain              = mxroute_domain.test.domain
-  username            = %[2]q
-  password_wo         = %[3]q
-  password_wo_version = %[4]d
-  limit               = %[5]d
-}
-`, domain, username, password, passwordVersion, limit)
 }
 
 // testAccEmailAccountResourceConfigNoPassword configures an existing mailbox

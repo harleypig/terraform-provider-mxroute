@@ -42,7 +42,6 @@ resource "mxroute_email_account" "example" {
 
 > **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
 
-- `limit` (Number) Daily outbound send limit (maximum `9600`, which is also the default). **The MXroute API ignores `limit` at create** — a new mailbox always starts at `9600`, so setting `limit` in the initial create fails with an inconsistent-result error. To change it, set it on an **update that also rotates the password** (bump `password_wo_version` with a new `password_wo`); the API rejects a `limit` change made without a password. When unset, the applied value is read back from the server.
 - `password_wo` (String, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) The mailbox password. This is a write-only attribute: it is sent to the API but never stored in Terraform state. **Required when creating** a mailbox; it may be omitted for a mailbox that already exists, in which case the password is left unchanged. To rotate the password on an existing mailbox, set the new value and bump `password_wo_version`. The API enforces complexity at create: use a mix of uppercase, lowercase, numbers, and special characters, or the create fails with a `VALIDATION_ERROR`.
 - `password_wo_version` (Number) Version trigger for `password_wo`. Because a write-only value cannot be diffed, increment this whenever `password_wo` changes so the new password is sent on update.
 - `quota` (Number) Mailbox storage quota in megabytes (`0` = unlimited). Optional; when unset, the mailbox is created with the [MXroute API](https://api.mxroute.com/docs) default of `1024` and the applied value is read back from the server.
@@ -51,6 +50,7 @@ resource "mxroute_email_account" "example" {
 
 - `email` (String) The full email address (`username@domain`).
 - `id` (String) Resource identifier — `domain/username`.
+- `limit` (Number) Daily outbound send limit, as reported by the server. **Read-only:** the MXroute API does not reliably honor a user-set limit — it ignores the value at create and applies an update only intermittently — so the provider reports this value but cannot set it. New mailboxes start at the `9600` default (also the maximum).
 - `sent` (Number) Number of messages sent in the current window.
 - `suspended` (Boolean) Whether the mailbox is suspended.
 - `usage` (Number) Current mailbox storage usage in megabytes.

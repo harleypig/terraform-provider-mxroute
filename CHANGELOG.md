@@ -2,6 +2,16 @@
 
 Compatibility: targets MXroute API 1.x.
 
+BREAKING CHANGES:
+
+* resource/mxroute_email_account: `limit` is now **read-only**. The MXroute API
+  does not reliably honor a user-set limit — it ignores the value at create,
+  rejects a change sent without a password, and applies a change sent with a
+  password rotation only intermittently — so the provider reports the server's
+  value but no longer writes it. Remove `limit` from configuration; a new
+  mailbox starts at the `9600` default (also the maximum). Previously `limit`
+  was settable.
+
 ENHANCEMENTS:
 
 * resource/mxroute_forwarder: `alias` is now validated at plan time against the
@@ -13,11 +23,11 @@ ENHANCEMENTS:
 
 NOTES:
 
-* resource/mxroute_email_account: documented the live behavior of `limit`. The
-  API ignores `limit` at create — a new mailbox always starts at the `9600`
-  default (also the maximum) — and honors a `limit` change only on an update
-  that also rotates the password. Set it via a password-rotating update, not at
-  create.
+* resource/mxroute_spam_settings, resource/mxroute_spam_blacklist_entry,
+  resource/mxroute_spam_whitelist_entry: spam **writes** currently fail with
+  `HTTP 500` on the MXroute API (both spam data sources read fine) — a
+  documented known limitation pending an MXroute fix. The spam-write acceptance
+  tests are skipped in the meantime.
 
 ## 0.4.0
 

@@ -24,6 +24,8 @@ func testAccCheckSpamBlacklistEntryDestroy(t *testing.T, domain, entry string) r
 }
 
 func TestAccSpamBlacklistEntryResource(t *testing.T) {
+	skipSpamWriteKnownLimitation(t)
+
 	domain := testAccTestDomain(t)
 	entry := "spammer@example.net"
 

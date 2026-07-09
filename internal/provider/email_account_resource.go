@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -51,20 +50,21 @@ type EmailAccountResourceModel struct {
 	ID                types.String  `tfsdk:"id"`
 }
 
-// createEmailAccountRequest is the POST email-accounts body.
+// createEmailAccountRequest is the POST email-accounts body. `limit` is
+// deliberately omitted — it is read-only (see the schema), so the provider
+// never writes it.
 type createEmailAccountRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Quota    *int64 `json:"quota,omitempty"`
-	Limit    *int64 `json:"limit,omitempty"`
 }
 
 // updateEmailAccountRequest is the PATCH email-account body; every field is
-// optional so only the changed attributes are sent.
+// optional so only the changed attributes are sent. `limit` is omitted
+// for the same read-only reason as create.
 type updateEmailAccountRequest struct {
 	Password *string `json:"password,omitempty"`
 	Quota    *int64  `json:"quota,omitempty"`
-	Limit    *int64  `json:"limit,omitempty"`
 }
 
 func (r *EmailAccountResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -104,27 +104,23 @@ func (r *EmailAccountResource) Schema(ctx context.Context, req resource.SchemaRe
 					int64planmodifier.UseStateForUnknown(),
 				},
 			},
-			// ICEBOX: MXroute `limit` (daily send limit / send-limit) quirks,
-			// all confirmed live on 2026-07-08. The API (1) IGNORES `limit` at
-			// create — a new mailbox is always the `9600` default (which is also
-			// the maximum), so a create that sets `limit` fails with an
-			// inconsistent-result error; (2) REJECTS a `limit` change sent
-			// without a password (HTTP 400 password-validation), yet (3) HONORS
-			// a `limit` change on an update that ALSO rotates the password.
-			// `quota` has none of these quirks. Kept settable + documented (see
-			// the description) rather than made read-only. This create-ignores /
-			// update-needs-password behavior contradicts the OpenAPI spec (which
-			// declares `limit` a plain settable field, default/max 9600), a
-			// proven spec-vs-live disparity worth an MXroute bug report — file
-			// it after a while of real provider use confirms it is stable (not
-			// transient spec drift); revisit if MXroute changes the behavior.
+			// `limit` is exposed READ-ONLY because the MXroute API does not
+			// reliably honor a user-set value (all confirmed live): it ignores
+			// `limit` at create (a new mailbox is always the 9600 default, which
+			// is also the maximum), rejects a change sent without a password
+			// (HTTP 400 password-validation), and even a change sent WITH a
+			// password rotation is applied only intermittently — the same path
+			// returned the requested 5000 twice, then the 9600 default. Rather
+			// than ship a settable attribute whose apply randomly fails, the
+			// provider reports the server's value but never writes it (it is
+			// dropped from the create/update bodies). This contradicts the
+			// OpenAPI spec, which declares `limit` a plain settable field
+			// (default/max 9600). TODO: file an MXroute bug report for the
+			// unreliable/undocumented `limit` write behavior; revisit making it
+			// settable if MXroute fixes it.
 			"limit": schema.Int64Attribute{
-				MarkdownDescription: "Daily outbound send limit (maximum `9600`, which is also the default). **The MXroute API ignores `limit` at create** — a new mailbox always starts at `9600`, so setting `limit` in the initial create fails with an inconsistent-result error. To change it, set it on an **update that also rotates the password** (bump `password_wo_version` with a new `password_wo`); the API rejects a `limit` change made without a password. When unset, the applied value is read back from the server.",
-				Optional:            true,
+				MarkdownDescription: "Daily outbound send limit, as reported by the server. **Read-only:** the MXroute API does not reliably honor a user-set limit — it ignores the value at create and applies an update only intermittently — so the provider reports this value but cannot set it. New mailboxes start at the `9600` default (also the maximum).",
 				Computed:            true,
-				Validators: []validator.Int64{
-					int64validator.AtMost(9600),
-				},
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -193,7 +189,6 @@ func (r *EmailAccountResource) Create(ctx context.Context, req resource.CreateRe
 		Username: username,
 		Password: password.ValueString(),
 		Quota:    int64PtrFromValue(plan.Quota),
-		Limit:    int64PtrFromValue(plan.Limit),
 	}
 
 	if err := r.client.Do(ctx, http.MethodPost, "/domains/"+domain+"/email-accounts", body, nil); err != nil {
@@ -293,10 +288,6 @@ func (r *EmailAccountResource) Update(ctx context.Context, req resource.UpdateRe
 
 	if !plan.Quota.Equal(state.Quota) {
 		body.Quota = int64PtrFromValue(plan.Quota)
-	}
-
-	if !plan.Limit.Equal(state.Limit) {
-		body.Limit = int64PtrFromValue(plan.Limit)
 	}
 
 	if err := r.client.Do(ctx, http.MethodPatch, "/domains/"+domain+"/email-accounts/"+pathSeg(username), body, nil); err != nil {
