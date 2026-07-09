@@ -17,6 +17,8 @@ func testAccCheckSpamWhitelistEntryDestroy(t *testing.T, domain, entry string) r
 }
 
 func TestAccSpamWhitelistEntryResource(t *testing.T) {
+	skipSpamWriteKnownLimitation(t)
+
 	domain := testAccTestDomain(t)
 	entry := "*@trusted.example"
 

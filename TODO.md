@@ -2,37 +2,26 @@
 
 ## Acceptance testing
 
-- [ ] Grow `TF_ACC` acceptance coverage as needs arise, scoped to
-  **provider-internals the fabric can't surface** (`ImportState`, write-only
-  `password_wo`, error paths, the read-only data sources) — it complements
-  harleydev's applied-CRUD e2e tier (`e2e/mxroute.md`). Breadth is done (every
-  resource has `ImportState` + `CheckDestroy`; every in-place-updatable
-  resource an update step); what's left is depth — element-content assertions
-  on the remaining list data sources and richer multi-attribute update
-  permutations. Run with `bin/mxroute-provider-testacc` (see
-  [TESTS.md](.claude/TESTS.md)).
-- [ ] Live-confirm `TestAccDomainResource_unverified422` on the next
-  `make testacc`. It applies `mxroute_domain` to an unverified domain and
-  `ExpectError`s MXroute's `HTTP 422 "Domain verification required"` (native
-  `terraform test` can't assert a provider apply-error, so this lives here,
-  not in harleydev's e2e suite). Needs a genuinely unverified, allow-listed
-  domain: `MXROUTE_TEST_UNVERIFIED_DOMAIN=harleydev.com` (skips when unset,
-  never the live domain).
-- [ ] Add a `TESTARGS` (or `-run` name-filter) passthrough to the `testacc`
-  make target so a scoped live run of specific acceptance tests is possible
-  without hand-rolling the env (the target hardcodes `./...`, so probing one
-  resource live means bypassing `bin/mxroute-provider-testacc` to
-  `source bin/set_env` + `TF_ACC=1 TF_ACC_TERRAFORM_PATH=… go test -run …`).
-  Consider a matching name-filter flag on harleydev's runner.
+- [x] Added a `TESTARGS` passthrough to the `testacc` make target for scoped
+  live runs (`make testacc TESTARGS='-run TestAccFoo'`).
+- [x] **v1 live-verification passed.** The suite is green/skip against the
+  live account: `TestAccDomainResource_unverified422`,
+  `TestAccForwarderResource_sentinelDestination`, `TestAccQuotaDataSource`,
+  and the full resource/data-source lifecycle all confirmed. The two live
+  findings became **documented limitations** (CONVENTIONS *Known
+  limitation*), not blockers: spam writes 500 (a mailbox does not help; write
+  tests skipped via `skipSpamWriteKnownLimitation`, MXroute ticket deferred)
+  and `email_account.limit` is unreliable (made **read-only**, MXroute ticket
+  deferred). The v0→v1 gate is clear.
+- [ ] Grow `TF_ACC` acceptance coverage further only as needs arise —
+  element-content assertions on the remaining list data sources, richer
+  multi-attribute update permutations. Not a v1 gate (depth, not correctness).
 
-## Features & fixes
+## Release
 
-- [ ] **Bug: spam writes 500 on a fresh domain.** `mxroute_spam_settings`,
-  `mxroute_spam_blacklist_entry`, and `mxroute_spam_whitelist_entry` all fail
-  `HTTP 500 Failed to update spam settings/list` against a just-created domain
-  (both spam data sources pass, so the GET shapes are fine) — confirmed
-  reproducing on the 2026-07-08 live run, where these three writes were the
-  only failures (reads, validators, and `VerificationKeyDataSource` pass).
-  Investigate fresh-vs-established domain (a read against harleypig.com is
-  safe anytime); open an MXroute ticket if it reproduces generally. Blocks the
-  spam-entry DELETE path (and its `@`/`+` encoding) until the creates succeed.
+- [ ] Cut `v1.0.0` — the acceptance / live-verification gate is cleared, so
+  the deliberate `0 → 1` jump is enabled (CONVENTIONS *Versioning & tagging*):
+  the provider adopts the API's current major (1) as its own; the first stable
+  tag targets API `1.x`. Cut with the `release-tag` skill; release notes carry
+  `Compatibility: targets MXroute API 1.x`. **Breaking since 0.4.0:**
+  `email_account.limit` is now read-only.

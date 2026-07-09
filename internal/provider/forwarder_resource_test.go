@@ -82,6 +82,32 @@ resource "mxroute_forwarder" "test" {
 	})
 }
 
+// TestAccForwarderResource_sentinelDestination verifies the special
+// `:blackhole:` destination (silently discard mail) round-trips. The MXroute
+// API accepts the `:blackhole:` and `:fail:` sentinels as forwarder
+// destinations, and the provider imposes no destination validation, so a
+// sentinel must survive create + read unchanged.
+func TestAccForwarderResource_sentinelDestination(t *testing.T) {
+	domain := testAccTestDomain(t)
+	alias := "discard"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckForwarderDestroy(t, domain, alias),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccForwarderResourceConfigDest(domain, alias, ":blackhole:"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("mxroute_forwarder.test", "alias", alias),
+					resource.TestCheckResourceAttr("mxroute_forwarder.test", "destinations.#", "1"),
+					resource.TestCheckTypeSetElemAttr("mxroute_forwarder.test", "destinations.*", ":blackhole:"),
+				),
+			},
+		},
+	})
+}
+
 func testAccForwarderResourceConfig(domain, alias string) string {
 	return testAccForwarderResourceConfigDest(domain, alias, "owner@example.net")
 }
