@@ -104,8 +104,22 @@ func (r *EmailAccountResource) Schema(ctx context.Context, req resource.SchemaRe
 					int64planmodifier.UseStateForUnknown(),
 				},
 			},
+			// ICEBOX: MXroute `limit` (daily send limit / send-limit) quirks,
+			// all confirmed live on 2026-07-08. The API (1) IGNORES `limit` at
+			// create — a new mailbox is always the `9600` default (which is also
+			// the maximum), so a create that sets `limit` fails with an
+			// inconsistent-result error; (2) REJECTS a `limit` change sent
+			// without a password (HTTP 400 password-validation), yet (3) HONORS
+			// a `limit` change on an update that ALSO rotates the password.
+			// `quota` has none of these quirks. Kept settable + documented (see
+			// the description) rather than made read-only. This create-ignores /
+			// update-needs-password behavior contradicts the OpenAPI spec (which
+			// declares `limit` a plain settable field, default/max 9600), a
+			// proven spec-vs-live disparity worth an MXroute bug report — file
+			// it after a while of real provider use confirms it is stable (not
+			// transient spec drift); revisit if MXroute changes the behavior.
 			"limit": schema.Int64Attribute{
-				MarkdownDescription: "Daily outbound send limit. Optional; when unset, the mailbox is created with the [MXroute API](https://api.mxroute.com/docs) default of `9600` and the applied value is read back from the server.",
+				MarkdownDescription: "Daily outbound send limit (maximum `9600`, which is also the default). **The MXroute API ignores `limit` at create** — a new mailbox always starts at `9600`, so setting `limit` in the initial create fails with an inconsistent-result error. To change it, set it on an **update that also rotates the password** (bump `password_wo_version` with a new `password_wo`); the API rejects a `limit` change made without a password. When unset, the applied value is read back from the server.",
 				Optional:            true,
 				Computed:            true,
 				Validators: []validator.Int64{

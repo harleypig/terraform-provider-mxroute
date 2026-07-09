@@ -4,16 +4,31 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+// forwarderAliasPattern is the character set the MXroute API enforces for a
+// forwarder alias (local part): it must start with a letter or number, then
+// allow letters, numbers, dots, underscores, and hyphens. The API enforces
+// this server-side (an out-of-charset alias fails create with HTTP 400
+// VALIDATION_ERROR) but does NOT declare it in its OpenAPI spec, where the
+// `alias` field is an unconstrained `type: string` (api/openapi.yaml). The
+// provider mirrors the rule at plan time so an invalid alias fails fast with
+// a clear message. TODO: this proven spec-vs-live disparity is worth an
+// MXroute bug report — file it after a while of real provider use confirms
+// it is stable (a genuine gap, not transient spec drift).
+var forwarderAliasPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 
 // Ensure ForwarderResource satisfies the framework interfaces.
 var (
@@ -56,7 +71,16 @@ func (r *ForwarderResource) Schema(ctx context.Context, req resource.SchemaReque
 		MarkdownDescription: "Manages an email forwarder (alias) on a mail domain. MXroute exposes no in-place update for a forwarder, so changing any attribute replaces the resource.",
 		Attributes: map[string]schema.Attribute{
 			"domain": requiredReplaceString("The domain the forwarder belongs to (e.g. `example.com`)."),
-			"alias":  requiredReplaceString("The local part of the forwarding address (e.g. `sales` for `sales@example.com`)."),
+			"alias": schema.StringAttribute{
+				MarkdownDescription: "The local part of the forwarding address (e.g. `sales` for `sales@example.com`). Must start with a letter or number and contain only letters, numbers, dots, underscores, and hyphens. Changing this replaces the resource.",
+				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(forwarderAliasPattern, "must start with a letter or number and contain only letters, numbers, dots, underscores, and hyphens"),
+				},
+			},
 			"destinations": schema.SetAttribute{
 				MarkdownDescription: "The email addresses mail to this alias is forwarded to. MXroute exposes no in-place update, so changing the destinations replaces the resource.",
 				ElementType:         types.StringType,

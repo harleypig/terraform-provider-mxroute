@@ -36,6 +36,17 @@ MXroute/DirectAdmin panel), so `mxroute_domain.ssl_enabled` is read-only
 status the provider can only report — don't re-attempt building SSL management
 against this API.
 
+**Known limitation — `email_account.limit` is not settable at create.**
+Confirmed live (2026-07-08): the API **ignores** `limit` on the create call (a
+new mailbox is always the `9600` default, which is also the maximum), **rejects**
+a `limit` change sent without a password, but **honors** a `limit` change on an
+update that also rotates the password. `quota` has none of these quirks. The
+provider keeps `limit` settable and documents the create-then-rotate path
+(schema description + the `limit` ICEBOX in `email_account_resource.go`) rather
+than making it read-only — don't re-attempt sending `limit` at create expecting
+it to stick. Consider an MXroute support ticket once we have more experience
+with the endpoint.
+
 ### Tracking the API spec
 
 The official OpenAPI 3 document is served (unauthenticated) at
