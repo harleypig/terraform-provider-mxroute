@@ -128,6 +128,16 @@ the fix is usually a patch bump here.
   Closing a PR always needs explicit instruction. The sentinel is read from
   the **default branch**, so the PR that adds it still merges manually —
   auto-merge applies from the next PR.
+- **`merge-finalization: enforce`.** Opts into the local
+  `merge-finalization.py` hook's hard block: a `gh pr merge` / **push-pr**
+  merge is **rejected** while the working tree's `TODO.md` still carries
+  completed `- [x]` items (i.e. the merge-time prune — push-pr Step 4.5 — was
+  skipped). It backstops the always-on finalization reminder so completed
+  items are pruned (to the changelog / git history) at merge rather than left
+  as a done-work archive on `master` — the slip that let two `[x]` items
+  linger after #52. The hook reads the **working tree**, so a PR that has run
+  its finalization (no `[x]` items left) merges cleanly, including the one
+  that adds this sentinel.
 - **Versioning:** semver `vX.Y.Z`, with the **MAJOR aligned to the MXroute
   API's major** (see *Versioning & tagging* below). A tag triggers the
   GoReleaser + GPG release that publishes to the Terraform Registry. Cut tags
