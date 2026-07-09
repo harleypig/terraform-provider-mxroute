@@ -39,9 +39,11 @@ func TestAccEmailAccountResource(t *testing.T) {
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "username", testAccEmailAccountUsername),
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "id", domain+"/"+testAccEmailAccountUsername),
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "email", testAccEmailAccountUsername+"@"+domain),
-					// limit set at create must round-trip — before the create body
-					// carried `limit`, this produced a provider-inconsistent result.
-					resource.TestCheckResourceAttr("mxroute_email_account.test", "limit", "5000"),
+					// The API ignores `limit` at create — a new mailbox always
+					// starts at the 9600 default (see the limit ICEBOX in
+					// email_account_resource.go). Setting it here is what a rotate
+					// step does; see TestAccEmailAccountResource_passwordRotation.
+					resource.TestCheckResourceAttr("mxroute_email_account.test", "limit", "9600"),
 					// The write-only password is never stored in state.
 					resource.TestCheckNoResourceAttr("mxroute_email_account.test", "password_wo"),
 				),
@@ -131,7 +133,10 @@ resource "mxroute_email_account" "test" {
 // sends the new password on update (a write-only value cannot be diffed, so the
 // version trigger is what drives it). The password never lands in state, so the
 // assertions are that the rotation applies cleanly, the version advances, and
-// password_wo stays absent from state.
+// password_wo stays absent from state. The rotate step also sets `limit`: the
+// API only honors a `limit` change on an update that carries a password, so a
+// rotation is the one path that can change it (see the limit ICEBOX in
+// email_account_resource.go).
 func TestAccEmailAccountResource_passwordRotation(t *testing.T) {
 	domain := testAccTestDomain(t)
 
@@ -151,10 +156,13 @@ func TestAccEmailAccountResource_passwordRotation(t *testing.T) {
 				),
 			},
 			{
-				// Rotate: new password, version bumped 1 -> 2.
-				Config: testAccEmailAccountResourceConfig(domain, username, "N3w-R0tated-P4ss!", 2),
+				// Rotate: new password, version bumped 1 -> 2, and set limit in
+				// the same update — the API honors a limit change only when a
+				// password rides along, so this is the one path that changes it.
+				Config: testAccEmailAccountResourceConfigLimit(domain, username, "N3w-R0tated-P4ss!", 2, 5000),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("mxroute_email_account.test", "password_wo_version", "2"),
+					resource.TestCheckResourceAttr("mxroute_email_account.test", "limit", "5000"),
 					resource.TestCheckNoResourceAttr("mxroute_email_account.test", "password_wo"),
 				),
 			},
@@ -173,9 +181,28 @@ resource "mxroute_email_account" "test" {
   username            = %[2]q
   password_wo         = %[3]q
   password_wo_version = %[4]d
-  limit               = 5000
 }
 `, domain, username, password, passwordVersion)
+}
+
+// testAccEmailAccountResourceConfigLimit is the password-bearing config with an
+// explicit limit. The MXroute API only honors `limit` on an update that also
+// rotates the password, so this is used for the rotate-and-set-limit step —
+// never at create, where the API ignores it.
+func testAccEmailAccountResourceConfigLimit(domain, username, password string, passwordVersion, limit int) string {
+	return fmt.Sprintf(`
+resource "mxroute_domain" "test" {
+  domain = %[1]q
+}
+
+resource "mxroute_email_account" "test" {
+  domain              = mxroute_domain.test.domain
+  username            = %[2]q
+  password_wo         = %[3]q
+  password_wo_version = %[4]d
+  limit               = %[5]d
+}
+`, domain, username, password, passwordVersion, limit)
 }
 
 // testAccEmailAccountResourceConfigNoPassword configures an existing mailbox
