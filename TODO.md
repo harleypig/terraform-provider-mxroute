@@ -36,6 +36,3 @@
   Investigate fresh-vs-established domain (a read against harleypig.com is
   safe anytime); open an MXroute ticket if it reproduces generally. Blocks the
   spam-entry DELETE path (and its `@`/`+` encoding) until the creates succeed.
-- [x] Opted into the merge-finalization enforce hook — added
-  `merge-finalization: enforce` to `.claude/CONVENTIONS.md` so a merge is
-  blocked while `TODO.md` still carries completed `[x]` items.
