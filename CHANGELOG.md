@@ -1,3 +1,24 @@
+## Unreleased
+
+Compatibility: targets MXroute API 1.x.
+
+ENHANCEMENTS:
+
+* resource/mxroute_forwarder: `alias` is now validated at plan time against the
+  character set the API enforces (it must start with a letter or number, then
+  allow only letters, numbers, dots, underscores, and hyphens). An invalid
+  alias fails on plan with a clear message instead of an HTTP 400
+  `VALIDATION_ERROR` at apply. The API enforces this server-side but does not
+  declare it in its OpenAPI spec.
+
+NOTES:
+
+* resource/mxroute_email_account: documented the live behavior of `limit`. The
+  API ignores `limit` at create — a new mailbox always starts at the `9600`
+  default (also the maximum) — and honors a `limit` change only on an update
+  that also rotates the password. Set it via a password-rotating update, not at
+  create.
+
 ## 0.4.0
 
 Compatibility: targets MXroute API 1.x.

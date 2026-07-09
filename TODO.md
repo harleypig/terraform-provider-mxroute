@@ -2,18 +2,6 @@
 
 ## Acceptance testing
 
-- [x] **RESOLVED (2026-07-08) — the test domain creates again.** The
-  `HTTP 422 "Domain verification required"` block on `harleypig.dev` was an
-  **MXroute-side glitch** (their Tailscale DNS acting up), cleared by MXroute
-  tier-3 support — **not** a per-domain cooldown/block, and **not** anything on
-  our side: our `_da-verify` TXT was published + authoritative throughout, and
-  `/verification-key` matched byte-for-byte. A re-run then created the domain
-  and drove the full lifecycle (coverage 24.9%→51.5%). **If it recurs:** a
-  domain-add 422 while `dig TXT _da-verify-<key>.<domain>` resolves
-  authoritatively **and** `TestAccVerificationKeyDataSource` passes is
-  MXroute-side — escalate, don't touch DNS/DNSSEC. Full detection signature +
-  incident writeup live in harleydev `e2e/mxroute.md` ("Known incident");
-  harleydev's `bin/mxroute-provider-testacc` now DNS-preflights before the run.
 - [ ] Grow `TF_ACC` acceptance coverage toward all resources and data sources
   (CRUD + import round-trips), scoped to **provider-internals the fabric can't
   surface** — `ImportState`, write-only `password_wo` create/rotate, error
@@ -38,17 +26,20 @@
   update permutations — added as needs arise. (These live assertions were
   confirmed on the 2026-07-08 run — see below.)
 - [ ] A live `make testacc` run (2026-07-08, coverage 52.7%) confirmed the
-  passing assertions: `TestAccPointerResource` (the `Domain.pointers` decode
-  against a live populated response), `TestAccForwardersDataSource` /
-  `TestAccEmailAccountsDataSource` (list element content —
-  `.0.alias`/`.0.email`/`.0.destinations`/`.0.quota`), and
-  `TestAccForwarderResource` (a destinations change round-tripping through the
-  `RequiresReplace` replace) all **pass**, as do every read, validator, and
-  `VerificationKeyDataSource`. The run's two other failures — the `+`-in-alias
-  rejection and the email-account `limit` behavior — are **resolved** (the
-  `[x]` items below). A *fully* green run now blocks only on the
-  spam-writes-500 bug (Features & fixes). Re-run with
+  depth and prior assertions pass: `TestAccPointerResource` (the
+  `Domain.pointers` decode against a live populated response),
+  `TestAccForwardersDataSource` / `TestAccEmailAccountsDataSource` (list
+  element content), and `TestAccForwarderResource` (a destinations change
+  through the `RequiresReplace` replace), alongside every read, validator, and
+  `VerificationKeyDataSource`. A *fully* green run now blocks only on the
+  spam-writes-500 bug (Features & fixes); re-run with
   `bin/mxroute-provider-testacc` after that lands.
+- [ ] Add a `TESTARGS` (or `-run` name-filter) passthrough to the `testacc`
+  make target so a scoped live run of specific acceptance tests is possible
+  without hand-rolling the env (the target hardcodes `./...`, so probing one
+  resource live means bypassing `bin/mxroute-provider-testacc` to
+  `source bin/set_env` + `TF_ACC=1 TF_ACC_TERRAFORM_PATH=… go test -run …`).
+  Consider a matching name-filter flag on harleydev's runner.
 - [x] **RESOLVED — `+` in a forwarder alias.** The live API rejects `+` at
   create (HTTP 400 VALIDATION_ERROR — aliases allow only letters, numbers,
   dots, underscores, hyphens; must start with a letter/number), voiding the
